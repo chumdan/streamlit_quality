@@ -1,0 +1,14 @@
+[theme]
+base = "light"
+primaryColor = "#004F9F"  # 중근당 BLUE
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+[server]
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 200
+maxMessageSize = 200

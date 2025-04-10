@@ -2,15 +2,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
+import io
+import base64
 
 # 한글 폰트 설정
-plt.rcParams['font.family'] = 'Malgun Gothic'  # 윈도우 기본 한글 폰트
-plt.rcParams['axes.unicode_minus'] = False     # 마이너스 기호 깨짐 방지
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
 
 # 페이지 설정
 st.set_page_config(
-    page_title="제약 공정 데이터 분석 시스템",
+    page_title="데이터 분석 시스템",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -21,8 +22,77 @@ if 'data' not in st.session_state:
     st.session_state.data = None
 
 # 타이틀 및 설명
-st.title('제약 공정 데이터 분석 시스템')
-st.markdown('프리그렐정 데이터 기반 공정 분석 시스템 프로토타입입니다.')
+st.title('데이터 분석 시스템')
+st.markdown('공정 데이터 분석 시스템 프로토타입입니다.')
+
+# 샘플 데이터 생성 함수
+def get_sample_data():
+    # 더 많은 샘플 데이터 생성 (최소 10개)
+    np.random.seed(42)  # 재현성을 위한 시드 설정
+    n_samples = 15  # 15개 샘플 생성
+    
+    # 배치번호 생성
+    batch_ids = [f'B{str(i+1).zfill(3)}' for i in range(n_samples)]
+    
+    # 제품 유형 생성 (3가지)
+    products = np.random.choice(['제품A', '제품B', '제품C'], size=n_samples)
+    
+    # 날짜 생성 (2023-01-01부터 순차적으로)
+    import datetime
+    start_date = datetime.datetime(2023, 1, 1)
+    dates = [(start_date + datetime.timedelta(days=i*5)).strftime('%Y-%m-%d') for i in range(n_samples)]
+    
+    # 데이터프레임 생성
+    data = {
+        '배치번호': batch_ids,
+        '제품': products,
+        '날짜': dates,
+        '측정값1': np.random.normal(100, 2, n_samples),  # 평균 100, 표준편차 2인 정규분포
+        '측정값2': np.random.normal(65, 3, n_samples),   # 평균 65, 표준편차 3인 정규분포
+        '측정값3': np.random.normal(75, 2, n_samples),   # 평균 75, 표준편차 2인 정규분포
+        '공정변수1': np.random.normal(15, 0.5, n_samples), # 평균 15, 표준편차 0.5인 정규분포
+        '결과1': np.random.normal(85, 3, n_samples),     # 평균 85, 표준편차 3인 정규분포
+        '결과2': np.random.normal(95, 2, n_samples)      # 평균 95, 표준편차 2인 정규분포
+    }
+    
+    df = pd.DataFrame(data)
+    
+    # 소수점 자리 정리
+    for col in ['측정값1', '측정값2', '측정값3', '공정변수1', '결과1', '결과2']:
+        df[col] = df[col].round(1)
+    
+    return df
+
+# 샘플 데이터 다운로드 링크 생성 함수
+def get_sample_download_link():
+    df = get_sample_data()
+    csv = df.to_csv(index=False, encoding='cp949')
+    b64 = base64.b64encode(csv.encode('cp949')).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="sample_data.csv">샘플 데이터 다운로드 (.csv)</a>'
+    return href
+
+# 데이터 업로드 주의사항 표시
+with st.expander("📌 데이터 업로드 주의사항", expanded=True):
+    st.markdown("""
+    ### 데이터 구조 요구사항
+    
+    본 시스템은 구조화된 데이터를 필요로 합니다:
+    
+    1. **파일 형식**: CSV 파일(.csv)로 제공되어야 합니다.
+    2. **인코딩**: 한글이 포함된 경우 CP949(EUC-KR) 인코딩을 권장합니다.
+    3. **데이터 구조**:
+        - 첫 번째 행은 변수명(컬럼명)이어야 합니다.
+        - 각 열은 하나의 변수를, 각 행은 하나의 관측값을 나타냅니다.
+        - 수치형 데이터는 단위 표시나 콤마가 없어야 합니다(예: '1,000' 대신 '1000').
+    4. **제한사항**:
+        - 최소 30개 이상의 데이터 포인트(행)가 있을 때 통계적 분석이 유의미합니다.
+        - 공정능력분석을 위해서는 수치형 데이터가 필요합니다.
+    """)
+    
+    # 샘플 데이터 표시 및 다운로드 링크
+    st.markdown("### 샘플 데이터")
+    st.dataframe(get_sample_data(), use_container_width=True)
+    st.markdown(get_sample_download_link(), unsafe_allow_html=True)
 
 # 파일 업로드 함수
 def upload_file():
@@ -32,45 +102,50 @@ def upload_file():
         try:
             # 파일 인코딩 시도 (여러 인코딩 시도)
             encodings = ['cp949', 'utf-8', 'euc-kr']
+            data = None
+            
             for encoding in encodings:
                 try:
                     data = pd.read_csv(uploaded_file, encoding=encoding)
+                    st.success(f"파일이 성공적으로 로드되었습니다. (인코딩: {encoding})")
                     break
                 except UnicodeDecodeError:
                     continue
             
-            # 컬럼명 정리
-            rename_dict = {
-                '제조번호': '제조번호', '수분함량(%)': '수분함량(%)', 'd(0.1)': 'd(0.1)', 
-                'd(0.5)': 'd(0.5)', 'd(0.9)': 'd(0.9)', '제품명': '제품명', 
-                '타정기': '타정기', '타정 일자': '타정 일자', '기표타정중량(mg)': '기표타정중량(mg)', 
-                '평균질량(mg)': '평균질량(mg)', '질량범위_Min(mg)': '질량범위_Min(mg)', 
-                '질량범위_Max(mg)': '질량범위_Max(mg)', '경도_Min(N)': '경도_Min(N)', 
-                '경도_Max(N)': '경도_Max(N)', '두께_Min': '두께_Min', '두께_Max': '두께_Max', 
-                '마손도(%)': '마손도(%)', '붕해도(min)': '붕해도(min)', '충전깊이(mm)': '충전깊이(mm)', 
-                '호퍼오리피스(mm)': '호퍼오리피스(mm)', '다이직경(mm)': '다이직경(mm)', 
-                '타정속도(rpm)': '타정속도(rpm)', '타압력(KN)': '타압력(KN)', 
-                '혼합기 속도(rpm)': '혼합기 속도(rpm)', '용출_최소': '용출_최소', 
-                '용출_최대': '용출_최대', '작업자': '작업자'
-            }
-            
-            # 데이터프레임의 열 이름을 재정의
-            data.rename(columns=lambda x: rename_dict.get(x, x), inplace=True)
+            if data is None:
+                st.error("파일 인코딩을 인식할 수 없습니다. CP949, UTF-8 또는 EUC-KR 인코딩의 CSV 파일을 사용해주세요.")
+                return None
             
             st.session_state.data = data
-            st.success('파일이 성공적으로 업로드되었습니다!')
             
             # 데이터 미리보기
             st.subheader('데이터 미리보기')
-            st.dataframe(data.head())
+            st.dataframe(data.head(), use_container_width=True)
             
             # 데이터 통계 요약
             st.subheader('데이터 요약')
-            st.write(f"행 수: {data.shape[0]}, 열 수: {data.shape[1]}")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("행 수", f"{data.shape[0]:,}개")
+            with col2:
+                st.metric("열 수", f"{data.shape[1]:,}개")
+            with col3:
+                st.metric("메모리 사용량", f"{data.memory_usage().sum() / (1024**2):.2f} MB")
             
             # 데이터 유형 확인
-            st.write("데이터 유형:")
-            st.write(data.dtypes)
+            st.subheader("데이터 유형")
+            
+            # 수치형 및 비수치형 컬럼 분리
+            numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+            non_numeric_cols = data.select_dtypes(exclude=[np.number]).columns.tolist()
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("수치형 변수:", len(numeric_cols))
+                st.write(", ".join(numeric_cols))
+            with col2:
+                st.write("비수치형 변수:", len(non_numeric_cols))
+                st.write(", ".join(non_numeric_cols))
             
         except Exception as e:
             st.error(f'파일 처리 중 오류가 발생했습니다: {e}')
@@ -83,30 +158,10 @@ data = upload_file()
 
 # 사용 안내
 if data is None:
-    st.info('왼쪽 메뉴에서 CSV 파일을 업로드한 후, 상단의 페이지 탭을 통해 다양한 분석을 수행할 수 있습니다.')
-    
-    # 샘플 이미지 표시
-    st.subheader('시스템 기능 설명')
-    st.markdown("""
-    ### 주요 기능:
-    
-    1. **공정 능력분석**:
-       - 변수별 통계량 및 공정능력지수(Cp, Cpk) 계산
-       - 공정 관리도 및 분포 시각화
-       - 공정 능력 판정 및 해석
-    
-    2. **통계분석**:
-       - 변수 간 상관관계 분석 및 시각화
-       - 주요 상관변수와의 산점도 및 회귀선
-       - 선택 변수의 박스플롯 및 기술통계량
-    
-    3. **특이값분석**:
-       - 배치별 Z-Score 계산 및 시각화
-       - 특이값 해석 및 상세 분석
-       - 이상값 분포 분석
-    4. **시뮬레이션**:
-       - 업로드한 데이터 학습 및 시뮬레이션 결과 출력
-
-    """)
+    st.info('상단의 업로드 버튼을 통해 CSV 파일을 업로드하면 분석을 시작할 수 있습니다.')
 else:
     st.success('데이터가 준비되었습니다. 상단 메뉴에서 원하는 분석 페이지를 선택하세요!')
+    
+    # 데이터 검증 정보
+    if data.shape[0] < 30:
+        st.warning(f"현재 데이터 샘플 수({data.shape[0]}개)가 30개 미만입니다. 통계적으로 유의미한 분석을 위해서는 최소 30개 이상의 샘플이 권장됩니다.")

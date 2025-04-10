@@ -107,13 +107,37 @@ if 'data' in st.session_state and st.session_state.data is not None:
         
         if len(var_data) > 0:
             # 정규성 검정
-            k2, p_value = stats.normaltest(var_data)
-            is_normal = p_value >= 0.05  # p값이 0.05 이상이면 정규성 가정 채택
+            try:
+                if len(var_data) < 8:
+                    st.warning(f"정규성 검정을 수행하기 위해서는 최소 8개 이상의 데이터가 필요합니다. 현재 데이터 개수: {len(var_data)}개")
+                    normality_result = "데이터 부족으로 검정 불가"
+                    shapiro_result = None
+                    k2_result = None
+                else:
+                    # Shapiro-Wilk 검정 (주요 검정으로 사용)
+                    shapiro_stat, shapiro_p = stats.shapiro(var_data)
+                    
+                    # D'Agostino-Pearson 검정 (보조 검정으로 사용)
+                    k2, p_value = stats.normaltest(var_data)
+                    
+                    # 결과 해석 (Shapiro-Wilk 기준)
+                    if shapiro_p < 0.05:
+                        normality_result = "비정규 분포 (p < 0.05)"
+                    else:
+                        normality_result = "정규 분포 (p >= 0.05)"
+                    
+                    shapiro_result = f"Shapiro-Wilk 검정: W = {shapiro_stat:.3f}, p-value = {shapiro_p:.4f}"
+                    k2_result = f"D'Agostino-Pearson 검정: k² = {k2:.3f}, p-value = {p_value:.4f}"
+            except Exception as e:
+                st.error(f"정규성 검정 중 오류가 발생했습니다: {str(e)}")
+                normality_result = "검정 오류"
+                shapiro_result = None
+                k2_result = None
             
             # 공정능력 지수 계산
             if std_val > 0:
                 # 정규성을 만족하는 경우의 공정능력지수
-                if is_normal:
+                if normality_result == "정규 분포 (p >= 0.05)":
                     cp = (usl - lsl) / (6 * std_val)
                     cpu = (usl - mean_val) / (3 * std_val)
                     cpl = (mean_val - lsl) / (3 * std_val)
@@ -223,10 +247,10 @@ if 'data' in st.session_state and st.session_state.data is not None:
             st.subheader('공정능력 분석 결과')
             
             # 정규성 검정 결과 표시
-            if is_normal:
-                st.success(f"✅ 정규성 검정 결과: 정규분포 가정을 만족합니다 (p-value = {p_value:.4f})")
+            if normality_result == "정규 분포 (p >= 0.05)":
+                st.success(f"✅ 정규성 검정 결과: 정규분포 가정을 만족합니다 ({shapiro_result})")
             else:
-                st.warning(f"⚠️ 정규성 검정 결과: 정규분포 가정을 만족하지 않습니다 (p-value = {p_value:.4f})")
+                st.warning(f"⚠️ 정규성 검정 결과: {normality_result} ({shapiro_result})")
                 st.info("🔍 비모수적 방법(백분위수 기반)을 사용하여 공정능력지수를 계산합니다.")
             
             metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
@@ -234,7 +258,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             with metrics_col1:
                 # 공정능력지수 표시
                 cp_display = f"{cp:.2f}" if not np.isnan(cp) else "N/A"
-                cp_name = "Cp" if is_normal else "Pp"
+                cp_name = "Cp" if normality_result == "정규 분포 (p >= 0.05)" else "Pp"
                 st.metric(cp_name, cp_display, 
                          delta="주의 필요" if not np.isnan(cp) and cp >= 1 and cp < 1.33 else
                                "적합" if not np.isnan(cp) and cp >= 1.33 else
@@ -243,7 +267,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             
             with metrics_col2:
                 cpk_display = f"{cpk:.2f}" if not np.isnan(cpk) else "N/A"
-                cpk_name = "Cpk" if is_normal else "Ppk"
+                cpk_name = "Cpk" if normality_result == "정규 분포 (p >= 0.05)" else "Ppk"
                 st.metric(cpk_name, cpk_display, 
                          delta="주의 필요" if not np.isnan(cpk) and cpk >= 1 and cpk < 1.33 else
                                "적합" if not np.isnan(cpk) and cpk >= 1.33 else
@@ -252,13 +276,13 @@ if 'data' in st.session_state and st.session_state.data is not None:
             
             with metrics_col3:
                 cpu_display = f"{cpu:.2f}" if not np.isnan(cpu) else "N/A"
-                cpu_name = "Cpu" if is_normal else "Ppu"
+                cpu_name = "Cpu" if normality_result == "정규 분포 (p >= 0.05)" else "Ppu"
                 st.metric(cpu_name, cpu_display)
                 st.caption("상한규격 기준 공정능력")
             
             with metrics_col4:
                 cpl_display = f"{cpl:.2f}" if not np.isnan(cpl) else "N/A"
-                cpl_name = "Cpl" if is_normal else "Ppl"
+                cpl_name = "Cpl" if normality_result == "정규 분포 (p >= 0.05)" else "Ppl"
                 st.metric(cpl_name, cpl_display)
                 st.caption("하한규격 기준 공정능력")
             
@@ -282,7 +306,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             interpretation_df = pd.DataFrame(columns=["지표", "값", "판정", "개선 방향"])
             
             # Cp/Pp 해석
-            cp_name = "Cp" if is_normal else "Pp"
+            cp_name = "Cp" if normality_result == "정규 분포 (p >= 0.05)" else "Pp"
             if np.isnan(cp):
                 cp_judgment = "계산 불가"
                 cp_action = "데이터 확인 필요"
@@ -297,7 +321,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 cp_action = "공정 산포 감소 필요"
                 
             # Cpk/Ppk 해석
-            cpk_name = "Cpk" if is_normal else "Ppk"
+            cpk_name = "Cpk" if normality_result == "정규 분포 (p >= 0.05)" else "Ppk"
             if np.isnan(cpk):
                 cpk_judgment = "계산 불가"
                 cpk_action = "데이터 확인 필요"
@@ -312,7 +336,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 cpk_action = "공정 중심 조정 및 산포 감소 시급"
                 
             # 중심 치우침 해석
-            central_value = mean_val if is_normal else np.median(var_data)
+            central_value = mean_val if normality_result == "정규 분포 (p >= 0.05)" else np.median(var_data)
             if abs(central_value - (usl + lsl) / 2) > std_val:
                 center_judgment = "치우침 있음"
                 center_action = "공정 중심 조정 필요"
@@ -321,7 +345,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 center_action = "현상 유지"
                 
             # 정규성 해석
-            if is_normal:
+            if normality_result == "정규 분포 (p >= 0.05)":
                 normal_judgment = "정규 분포"
                 normal_action = "표준 공정능력분석 적용 가능"
             else:
@@ -332,7 +356,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             interpretation_df.loc[0] = [f"공정능력({cp_name})", cp_display, cp_judgment, cp_action]
             interpretation_df.loc[1] = [f"공정능력지수K({cpk_name})", cpk_display, cpk_judgment, cpk_action]
             interpretation_df.loc[2] = ["공정 중심", f"{central_value:.2f}", center_judgment, center_action]
-            interpretation_df.loc[3] = ["정규성", f"p={p_value:.4f}", normal_judgment, normal_action]
+            interpretation_df.loc[3] = ["정규성", f"{shapiro_result}", normal_judgment, normal_action]
             
             st.table(interpretation_df)
             
@@ -351,7 +375,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             st.subheader("💡 개선 방안")
             
             # 정규성에 따른 추가 설명
-            if not is_normal:
+            if normality_result != "정규 분포 (p >= 0.05)":
                 st.info("""
                 📌 **비정규 분포 데이터에 대한 참고 사항**:
                 - 백분위수 기반 계산법(Pp, Ppk)이 사용되었습니다.
@@ -364,7 +388,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     st.info("이론적으로 Cp는 항상 Cpk보다 크거나 같아야 합니다. 데이터를 재확인하세요.")
                 elif cp > cpk:
                     # 정규성에 따라 다른 메시지 표시
-                    central_term = "평균" if is_normal else "중앙값"
+                    central_term = "평균" if normality_result == "정규 분포 (p >= 0.05)" else "중앙값"
                     st.info(f"공정 중심({central_term})을 규격 중심({(usl+lsl)/2:.2f})에 맞추면 {cpk_name}를 {cp:.2f}까지 향상시킬 수 있습니다.")
                 
                 if not np.isnan(cpk) and cpk < 1.0:
@@ -383,7 +407,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 - **보라색 점선(USL/LSL)**: 제품 규격 한계를 나타냅니다.
                 
                 ### 히스토그램 해석
-                - **정규분포 여부**: p값이 0.05 이상이면 정규분포로 간주합니다(현재 p={p_value:.4f}).
+                - **정규분포 여부**: p값이 0.05 이상이면 정규분포로 간주합니다(현재 p={shapiro_result}).
                 - **종 모양에 가까울수록**: 정규분포를 따르는 안정적인 공정입니다.
                 - **규격선(USL/LSL)이 분포 바깥에 있을수록**: 공정능력이 우수합니다.
                 - **규격선이 분포 안에 있다면**: 불량품 발생 가능성이 있습니다.
@@ -394,7 +418,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 """)
                 
                 # 정규성에 따른 추가 설명
-                if not is_normal:
+                if normality_result != "정규 분포 (p >= 0.05)":
                     st.markdown("""
                     ### 비모수적 방법(백분위수)에 대한 추가 설명
                     - **Pp**: 99.865% 및 0.135% 백분위수 간의 거리로 계산됩니다.
@@ -403,7 +427,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     """)
 
             # 비모수적 방법에 대한 추가 설명을 여기에 넣으세요
-            if not is_normal:
+            if normality_result != "정규 분포 (p >= 0.05)":
                 with st.expander("🔍 비모수적 공정능력지수(Pp, Ppk) 쉽게 이해하기"):
                     st.markdown("""
                     ### 비모수적 공정능력지수 쉽게 이해하기
