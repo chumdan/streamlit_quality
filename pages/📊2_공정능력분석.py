@@ -30,6 +30,43 @@ def display_plotly_centered(fig, width_pct=90):
     with cols[1]:
         st.plotly_chart(fig, use_container_width=True)
 
+# 이상치 탐지 함수 추가
+def detect_outliers(data, method='IQR', threshold=1.5):
+    """이상치를 탐지하는 함수
+    
+    Parameters:
+    -----------
+    data : pandas.Series
+        이상치를 탐지할 데이터
+    method : str, default 'IQR'
+        이상치 탐지 방법, 'IQR' 또는 'Z-Score'
+    threshold : float, default 1.5
+        IQR 방법에서는 1.5 (일반적) 또는 3.0 (극단값만), Z-Score 방법에서는 3.0이 일반적
+        
+    Returns:
+    --------
+    pandas.Series
+        이상치 여부를 나타내는 불리언 시리즈 (True: 이상치)
+    """
+    if method == 'IQR':
+        Q1 = data.quantile(0.25)
+        Q3 = data.quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - threshold * IQR
+        upper_bound = Q3 + threshold * IQR
+        return (data < lower_bound) | (data > upper_bound)
+    elif method == 'Z-Score':
+        z_scores = np.abs((data - data.mean()) / data.std())
+        return z_scores > threshold
+    else:
+        raise ValueError("method 인자는 'IQR' 또는 'Z-Score'여야 합니다.")
+
+st.set_page_config(
+    page_title="공정능력분석",
+    page_icon="📊",
+    layout="wide"
+)
+
 st.title("1. 공정능력분석")
 
 # 공정능력분석 설명 추가
@@ -79,11 +116,119 @@ if 'data' in st.session_state and st.session_state.data is not None:
             options=numeric_cols
         )
         
+        # 데이터 기본값 계산
+        var_data_original = data[selected_var].dropna()
+        
+        # 이상치 처리 옵션 추가
+        st.subheader("이상치 처리 옵션")
+        
+        # 이상치 처리에 대한 설명 추가
+        with st.expander("📚 이상치란? 이상치 처리가 왜 중요한가요?"):
+            st.markdown("""
+            ### 이상치(Outlier)란?
+            
+            이상치는 다른 관측값들과 동떨어진, 비정상적으로 큰 값이나 작은 값을 의미합니다. 
+            이상치는 실제 공정의 문제, 측정 오류, 또는 데이터 입력 오류 등 다양한 원인으로 발생할 수 있습니다.
+            
+            ### 이상치가 공정능력분석에 미치는 영향
+            
+            이상치는 다음과 같은 문제를 일으킬 수 있습니다:
+            
+            1. **평균 및 표준편차 왜곡**: 이상치는 데이터의 평균과 표준편차를 크게 왜곡시킬 수 있습니다.
+            2. **공정능력지수 과소평가**: 이상치로 인해 표준편차가 증가하면 Cp, Cpk 등의 공정능력지수가 실제보다 낮게 계산될 수 있습니다.
+            3. **공정 안정성 오판**: 이상치를 포함한 분석은 안정적인 공정을 불안정하다고 잘못 판단하게 할 수 있습니다.
+            
+            ### 이상치 탐지 방법
+            
+            #### 1. IQR(Interquartile Range) 방법
+            - **원리**: 데이터의 1사분위수(Q1)와 3사분위수(Q3) 사이의 거리(IQR)를 기반으로 함
+            - **이상치 판단**: Q1 - k×IQR 보다 작거나 Q3 + k×IQR 보다 큰 값 (k는 보통 1.5 또는 3)
+            - **장점**: 데이터 분포에 덜 민감하며, 비대칭 분포에서도 비교적 잘 작동함
+            - **적합한 상황**: 데이터가 정규분포가 아니거나, 분포 형태를 잘 모를 때
+            
+            #### 2. Z-Score 방법
+            - **원리**: 각 데이터 포인트가 평균으로부터 얼마나 떨어져 있는지를 표준편차 단위로 측정
+            - **이상치 판단**: |Z| > k (보통 k=3, 즉 평균에서 3 표준편차 이상 떨어진 값)
+            - **장점**: 직관적이고 계산이 간단함
+            - **적합한 상황**: 데이터가 대략 정규분포를 따를 때
+            
+            ### 이상치 처리 방법 선택 시 고려사항
+            
+            - **제거**: 이상치가 측정 오류나 데이터 입력 오류로 확인된 경우 적합
+            - **시각적으로 표시만**: 이상치가 실제 공정의 이상을 나타낼 수 있는 경우, 제거하지 않고 표시만 하여 추가 조사 가능
+            - **대체**: (현재 이 도구에서는 지원하지 않음) 이상치를 중앙값이나 평균 등으로 대체하는 방법
+            
+            ### 주의사항
+            
+            - 모든 이상치가 오류는 아닙니다. 일부 이상치는 중요한 정보를 제공할 수 있습니다.
+            - 이상치 처리는 데이터의 특성과 업무 맥락을 고려하여 신중하게 수행해야 합니다.
+            - 이상치 처리 전/후의 결과를 비교하여 처리의 영향을 평가하는 것이 좋습니다.
+            """)
+
+        outlier_col1, outlier_col2 = st.columns(2)
+
+        with outlier_col1:
+            use_outlier_treatment = st.checkbox("이상치 처리 활성화", value=False, 
+                                             help="데이터에서 이상치를 탐지하고 처리합니다.")
+
+        if use_outlier_treatment:
+            with outlier_col1:
+                outlier_method = st.selectbox(
+                    "이상치 탐지 방법",
+                    options=["IQR", "Z-Score"],
+                    help="IQR: 사분위수 범위 기반 방법, Z-Score: 표준점수 기반 방법"
+                )
+                
+            with outlier_col2:
+                if outlier_method == "IQR":
+                    threshold = st.slider("IQR 임계값", min_value=1.0, max_value=3.0, value=1.5, step=0.1,
+                                       help="1.5(일반적 기준), 3.0(극단값만 탐지)")
+                    st.caption("💡 임계값 1.5는 일반적인 기준, 3.0은 극단적인 이상치만 탐지")
+                else:  # Z-Score
+                    threshold = st.slider("Z-Score 임계값", min_value=2.0, max_value=4.0, value=3.0, step=0.1,
+                                       help="3.0(일반적 기준), 값이 클수록 극단적인 이상치만 탐지")
+                    st.caption("💡 임계값 3.0은 데이터의 99.7%를 정상으로 간주 (정규분포 가정 시)")
+            
+            # 이상치 탐지
+            outliers = detect_outliers(var_data_original, method=outlier_method, threshold=threshold)
+            outlier_count = outliers.sum()
+            
+            # 이상치 처리 방법 선택
+            outlier_treatment = st.radio(
+                "이상치 처리 방법",
+                options=["제거", "시각적으로 표시만"],
+                index=0,
+                help="이상치를 제거하거나 시각적으로만 표시할 수 있습니다."
+            )
+            
+            # 이상치 정보 표시
+            if outlier_count > 0:
+                st.info(f"탐지된 이상치: {outlier_count}개 ({outlier_count/len(var_data_original):.1%})")
+                
+                # 이상치 데이터 표시
+                if st.checkbox("이상치 데이터 보기"):
+                    st.dataframe(data[outliers][selected_var])
+                    
+                    if outlier_treatment == "제거":
+                        st.caption("⚠️ 위 이상치들은 분석에서 제외됩니다.")
+                    else:
+                        st.caption("ℹ️ 위 이상치들은 그래프에 표시되며 분석에 포함됩니다.")
+            else:
+                st.success("이상치가 탐지되지 않았습니다.")
+            
+            # 이상치 처리
+            if outlier_treatment == "제거" and outlier_count > 0:
+                var_data = var_data_original[~outliers].copy()
+                st.warning(f"이상치 {outlier_count}개가 제거되었습니다. 남은 데이터: {len(var_data)}개")
+            else:
+                var_data = var_data_original.copy()
+        else:
+            var_data = var_data_original.copy()
+        
         # 규격 한계 설정
         st.subheader("규격 한계 설정")
         
-        # 데이터 기본값 계산
-        var_data = data[selected_var].dropna()
+        # 데이터 통계량 계산
         mean_val = var_data.mean()
         std_val = var_data.std()
         min_val = var_data.min()
@@ -203,6 +348,42 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 )
             )
             
+            # 이상치 데이터 표시 (사용자가 '시각적으로 표시만' 선택 시)
+            if use_outlier_treatment and outlier_treatment == "시각적으로 표시만" and outlier_count > 0:
+                # 이상치 데이터 포인트만 가져오기
+                outlier_data = var_data_original[outliers]
+                
+                # 이상치의 인덱스를 x_values에 매핑
+                outlier_indices = []
+                for idx in outlier_data.index:
+                    try:
+                        # 원본 데이터에서 이상치 인덱스 찾기
+                        pos = var_data_original.index.get_loc(idx)
+                        outlier_indices.append(pos)
+                    except:
+                        continue
+                
+                # 이상치를 빨간색 X로 표시
+                if outlier_indices:
+                    outlier_y = [var_data_original.iloc[i] for i in outlier_indices]
+                    outlier_hover = [f"이상치 ID: {var_data_original.index[i]}<br>값: {var_data_original.iloc[i]:.2f}" for i in outlier_indices]
+                    
+                    fig_plotly.add_trace(
+                        go.Scatter(
+                            x=[outlier_indices], 
+                            y=[outlier_y],
+                            mode='markers',
+                            name='이상치',
+                            marker=dict(
+                                color='red',
+                                size=10,
+                                symbol='x'
+                            ),
+                            text=outlier_hover,
+                            hoverinfo='text'
+                        )
+                    )
+            
             # 기준선 추가
             fig_plotly.add_trace(go.Scatter(x=x_values, y=[mean_val]*len(x_values), mode='lines', name='평균', line=dict(color='green', width=2)))
             fig_plotly.add_trace(go.Scatter(x=x_values, y=[mean_val + 3*std_val]*len(x_values), mode='lines', name='+3σ', line=dict(color='red', dash='dash')))
@@ -242,6 +423,12 @@ if 'data' in st.session_state and st.session_state.data is not None:
             st.subheader("공정관리도 (인터랙티브)")
             st.caption("👉 각 점에 마우스를 올리면 자세한 정보를 볼 수 있습니다")
             display_plotly_centered(fig_plotly)
+            
+            # 이상치 처리 정보 표시
+            if use_outlier_treatment:
+                st.caption(f"📊 이상치 처리: {outlier_method} 방법, 임계값 {threshold}, 처리 방법: {outlier_treatment}")
+                if outlier_treatment == "제거" and outlier_count > 0:
+                    st.caption(f"🔍 이상치 {outlier_count}개 제거 후 분석 수행, 남은 데이터: {len(var_data)}개")
             
             # 공정능력 지수 표시
             st.subheader('공정능력 분석 결과')
