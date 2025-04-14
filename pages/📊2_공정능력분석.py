@@ -7,10 +7,262 @@ from scipy import stats
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.stats import gaussian_kde
+import io
+import base64
+from matplotlib.figure import Figure
+import plotly.express as px
+import plotly.figure_factory as ff
+from plotly.io import to_image
+import plotly.io as pio
+import warnings
+
+# kaleido 경고 무시
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
+
+# 보고서 생성 함수 정의
+def create_csv_data():
+    """공정능력분석 결과를 CSV 형식으로 생성"""
+    # 현재 스코프에서 전역 변수 사용
+    global data, selected_var, var_data, var_data_original, mean_val, std_val, min_val, max_val, lsl, usl
+    global cp, cpk, cpu, cpl, yield_rate, defect_rate_ppm, normality_result
+    
+    # CSV용 데이터 프레임 생성
+    result_df = pd.DataFrame()
+    
+    # 기본 정보 섹션
+    info_data = {
+        "항목": ["분석 변수", "데이터 개수", "평균", "표준편차", "최소값", "최대값", "하한규격(LSL)", "상한규격(USL)", "정규성 검정 결과"],
+        "값": [selected_var, len(var_data), mean_val, std_val, min_val, max_val, lsl, usl, normality_result]
+    }
+    info_df = pd.DataFrame(info_data)
+    
+    # 공정능력 지수 섹션
+    capability_data = {
+        "항목": ["Cp/Pp", "Cpk/Ppk", "Cpu/Ppu", "Cpl/Ppl", "규격 내 비율(%)", "불량률(PPM)"],
+        "값": [cp, cpk, cpu, cpl, yield_rate, defect_rate_ppm]
+    }
+    capability_df = pd.DataFrame(capability_data)
+    
+    # 원본 데이터 준비
+    data_df = pd.DataFrame({selected_var: var_data_original})
+    
+    # CSV 데이터 생성 (BOM 추가로 한글 문제 해결)
+    buffer = io.StringIO()
+    buffer.write('\ufeff')  # BOM 문자 추가
+    
+    # 섹션 구분자와 함께 각 데이터프레임 기록
+    buffer.write("# 기본 정보\n")
+    info_df.to_csv(buffer, index=False, encoding='utf-8')
+    
+    buffer.write("\n\n# 공정능력 지수\n")
+    capability_df.to_csv(buffer, index=False, encoding='utf-8')
+    
+    buffer.write("\n\n# 원본 데이터\n")
+    data_df.to_csv(buffer, index=True, encoding='utf-8')
+    
+    return buffer.getvalue()
+
+def create_html_report():
+    """공정능력분석 결과를 HTML 보고서 형식으로 생성 (그래프 제외)"""
+    # st.write("--- DEBUG: Inside create_html_report (No Graphs): Starting --- ") # 디버깅 제거
+    # 현재 스코프에서 전역 변수 사용
+    global data, selected_var, var_data, var_data_original, mean_val, std_val, min_val, max_val, lsl, usl
+    global cp, cpk, cpu, cpl, yield_rate, defect_rate_ppm, normality_result, shapiro_result
+    # 그래프 관련 global 변수 제거
+
+    # 이미지 변환 함수 제거 (이미 없음)
+
+    # 전체 HTML 생성 과정을 try-except로 감쌈
+    try:
+        # st.write("--- DEBUG: Inside create_html_report (No Graphs): Preparing data --- ") # 디버깅 제거
+        
+        # --- 그래프 변환 관련 로직 완전 제거 ---
+        # === 임시 테스트 코드 완전 제거 ===
+
+        # CSS 클래스 결정 함수들 (이전과 동일, 내용 축약)
+        def get_cp_class():
+            if cp >= 1.33: return 'good'
+            elif cp >= 1.0: return 'warning'
+            else: return 'bad'
+        def get_cpk_class():
+            if cpk >= 1.33: return 'good'
+            elif cpk >= 1.0: return 'warning'
+            else: return 'bad'
+        def get_yield_class():
+            if yield_rate >= 99.73: return 'good'
+            elif yield_rate >= 95: return 'warning'
+            else: return 'bad'
+        def get_defect_class():
+            if defect_rate_ppm <= 2700: return 'good'
+            elif defect_rate_ppm <= 50000: return 'warning'
+            else: return 'bad'
+
+        # 결과 텍스트 함수들 (원래 로직 복원)
+        def get_cp_text():
+            if cp >= 1.33: return '우수 (Cp ≥ 1.33)'
+            elif cp >= 1.0: return '적절 (1.00 ≤ Cp < 1.33)'
+            else: return '부적합 (Cp < 1.00)'
+        def get_cpk_text():
+            if cpk >= 1.33: return '우수 (Cpk ≥ 1.33)'
+            elif cpk >= 1.0: return '적절 (1.00 ≤ Cpk < 1.33)'
+            else: return '부적합 (Cpk < 1.00)'
+        def get_yield_text():
+            if yield_rate >= 99.73: return '양호 (≥ 99.73%)'
+            elif yield_rate >= 95: return '주의 (≥ 95%)'
+            else: return '개선필요 (< 95%)'
+        def get_defect_text():
+            if defect_rate_ppm <= 2700: return '양호 (≤ 2,700 PPM)'
+            elif defect_rate_ppm <= 50000: return '주의 (≤ 50,000 PPM)'
+            else: return '개선필요 (> 50,000 PPM)'
+
+        # 결과 해석 텍스트 (원래 로직 복원)
+        def get_capability_text():
+            if cpk >= 1.33:
+                return f'공정이 규격 요구사항을 <span class="good">충분히 만족</span>합니다. (Cpk = {cpk:.2f} ≥ 1.33)'
+            elif cpk >= 1.0:
+                return f'공정이 규격 요구사항을 <span class="warning">최소한으로 만족</span>합니다. (Cpk = {cpk:.2f})'
+            else:
+                return f'공정이 규격 요구사항을 <span class="bad">만족하지 못합니다</span>. (Cpk = {cpk:.2f} < 1.0)'
+        def get_center_text():
+            if not np.isnan(lsl) and not np.isnan(usl) and not np.isnan(std_val) and std_val > 0:
+                spec_center = (lsl + usl) / 2
+                deviation = abs(mean_val - spec_center)
+                if deviation < 0.1 * std_val:
+                    return f'공정 평균({mean_val:.2f})이 규격 중심({spec_center:.2f})에 <span class="good">매우 가깝습니다</span>.'
+                elif deviation < 0.5 * std_val:
+                    return f'공정 평균({mean_val:.2f})이 규격 중심({spec_center:.2f})과 <span class="warning">약간 차이</span>가 있습니다.'
+                else:
+                    return f'공정 평균({mean_val:.2f})이 규격 중심({spec_center:.2f})과 <span class="bad">상당한 차이</span>가 있습니다.'
+            else:
+                return f'공정 평균({mean_val:.2f}) (규격 중심과의 비교 불가)'
+        def get_dispersion_text():
+            if cp >= 1.33:
+                return f'공정 산포가 <span class="good">충분히 작습니다</span>. (Cp = {cp:.2f} ≥ 1.33)'
+            elif cp >= 1.0:
+                return f'공정 산포가 <span class="warning">경계 수준</span>입니다. (Cp = {cp:.2f})'
+            else:
+                return f'공정 산포가 <span class="bad">너무 큽니다</span>. (Cp = {cp:.2f} < 1.0)'
+        def get_improvement_text():
+            recommendations = []
+            if cpk < 1.33:
+                # 중심 개선 제안
+                if not np.isnan(lsl) and not np.isnan(usl) and not np.isnan(std_val) and std_val > 0 and abs(mean_val - (lsl+usl)/2) >= 0.1*std_val:
+                    recommendations.append(f'<li>공정 평균을 규격 중심({(lsl+usl)/2:.2f})에 더 가깝게 조정하세요.</li>')
+                # 산포 개선 제안
+                if cp < 1.33:
+                    recommendations.append('<li>공정 변동성을 줄이기 위한 방안을 검토하세요 (원인 분석, 표준화 강화 등).</li>')
+                recommendations.append('<li>공정 관리 시스템을 강화하고 정기적인 모니터링을 실시하세요.</li>')
+            else:
+                recommendations.append('<li>현재 공정이 규격을 충분히 만족하므로 현 상태 유지 및 관리에 집중하세요.</li>')
+                
+            return "".join(recommendations)
+
+        # 그래프 섹션 HTML 제거 (이미 없음)
+
+        # HTML 구조 생성 (그래프 섹션 제거 및 섹션 번호 조정)
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>{selected_var} 공정능력분석 보고서 (그래프 제외)</title>
+            <style>
+                /* ... (스타일 정의, 그래프 관련 스타일 제거) ... */
+                body {{ font-family: 'Malgun Gothic', Arial, sans-serif; margin: 20px; }}
+                h1, h2, h3 {{ color: #2c3e50; }}
+                table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; }}
+                th {{ background-color: #f2f2f2; text-align: left; }}
+                .good {{ color: green; }}
+                .warning {{ color: orange; }}
+                .bad {{ color: red; }}
+                .container {{ margin-bottom: 30px; }}
+                .note {{ background-color: #f8f9fa; padding: 10px; border-left: 5px solid #4CAF50; margin-bottom: 20px; }}
+                .header {{ background-color: #2c3e50; color: white; padding: 20px; margin-bottom: 20px; }}
+                .footer {{ background-color: #f8f9fa; padding: 10px; text-align: center; margin-top: 30px; }}
+                .warning-container {{ background-color: #fff3cd; padding: 15px; border-left: 5px solid #ffc107; margin: 20px 0; }}
+                @media print {{
+                    .header {{ background-color: #fff; color: #000; }}
+                    .note {{ background-color: #fff; border-left: 2px solid #000; }}
+                    .footer {{ background-color: #fff; }}
+                    .warning-container {{ background-color: #fff; border-left: 2px solid #000; }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>{selected_var} 공정능력분석 보고서</h1>
+                <p>생성일시: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </div>
+            
+            <div class="container">
+                <h2>1. 기본 정보</h2>
+                <table>
+                    <tr><th>항목</th><th>값</th></tr>
+                    <tr><td>분석 변수</td><td>{selected_var}</td></tr>
+                    <tr><td>데이터 개수</td><td>{len(var_data)}</td></tr>
+                    <tr><td>평균</td><td>{mean_val:.4f}</td></tr>
+                    <tr><td>표준편차</td><td>{std_val:.4f}</td></tr>
+                    <tr><td>최소값</td><td>{min_val:.4f}</td></tr>
+                    <tr><td>최대값</td><td>{max_val:.4f}</td></tr>
+                    <tr><td>하한규격(LSL)</td><td>{lsl:.4f}</td></tr>
+                    <tr><td>상한규격(USL)</td><td>{usl:.4f}</td></tr>
+                    <tr><td>정규성 검정 결과</td><td>{normality_result}</td></tr>
+                    <tr><td>Shapiro-Wilk 검정</td><td>{shapiro_result if shapiro_result else "N/A"}</td></tr>
+                </table>
+            </div>
+            
+            <div class="container">
+                <h2>2. 공정능력 분석 결과</h2>
+                <table>
+                    <tr><th>항목</th><th>값</th><th>평가</th></tr>
+                    <tr><td>공정능력지수(Cp/Pp)</td><td>{cp:.4f}</td><td class="{get_cp_class()}">{get_cp_text()}</td></tr>
+                    <tr><td>공정능력지수K(Cpk/Ppk)</td><td>{cpk:.4f}</td><td class="{get_cpk_class()}">{get_cpk_text()}</td></tr>
+                    <tr><td>상한 공정능력지수(Cpu/Ppu)</td><td>{cpu:.4f}</td><td></td></tr>
+                    <tr><td>하한 공정능력지수(Cpl/Ppl)</td><td>{cpl:.4f}</td><td></td></tr>
+                    <tr><td>합격률(%)</td><td>{yield_rate:.4f}%</td><td class="{get_yield_class()}">{get_yield_text()}</td></tr>
+                    <tr><td>불량률(PPM)</td><td>{defect_rate_ppm:.1f} PPM</td><td class="{get_defect_class()}">{get_defect_text()}</td></tr>
+                </table>
+            </div>
+            
+            <div class="container">
+                <h2>3. 분석 결과 해석</h2>
+                <div class="note">
+                    <h3>공정능력 평가</h3><p>{get_capability_text()}</p>
+                    <h3>공정 중심 평가</h3><p>{get_center_text()}</p>
+                    <h3>공정 산포 평가</h3><p>{get_dispersion_text()}</p>
+                </div>
+            </div>
+            
+            <!-- 시각화 자료 섹션 완전 제거 -->
+            
+            <div class="container">
+                <h2>4. 개선 권장사항</h2> <!-- 섹션 번호 수정 -->
+                <ul>
+                    {get_improvement_text()}
+                </ul>
+            </div>
+            
+            <div class="footer">
+                <p>이 보고서는 자동으로 생성되었습니다. © 품질관리시스템</p>
+            </div>
+        </body>
+        </html>
+        """
+        # st.write("--- DEBUG: Inside create_html_report (No Graphs): HTML structure created successfully --- ") # 디버깅 제거
+        return html
+
+    except Exception as e:
+        st.error(f"HTML 보고서 생성 중 심각한 오류가 발생했습니다: {str(e)}")
+        # st.write(f"--- DEBUG: Inside create_html_report (No Graphs): Major error occurred: {e} --- ") # 디버깅 제거
+        # 간단한 오류 보고서 반환 (그래프 제외 버전)
+        return f"""
+        <!DOCTYPE html><html><head><meta charset="UTF-8"><title>오류 보고서</title><style>body {{ font-family: 'Malgun Gothic', Arial, sans-serif; margin: 20px; }}.error {{ color: red; background-color: #ffeeee; padding: 20px; border-left: 5px solid red; }}</style></head><body><h1>보고서 생성 오류</h1><div class="error"><p>HTML 보고서를 생성하는 중 오류가 발생했습니다:</p><p>{str(e)}</p><p>관리자에게 문의하거나 나중에 다시 시도해주세요.</p></div></body></html>
+        """
 
 # 그래프를 중앙에 표시하는 헬퍼 함수 추가
 def display_plot_centered(fig, width_pct=90):
@@ -288,6 +540,19 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     cpl = (mean_val - lsl) / (3 * std_val)
                     cpk = min(cpu, cpl)
                     
+                    # 규격 내 제품 비율(합격률) 계산
+                    z_usl = (usl - mean_val) / std_val
+                    z_lsl = (lsl - mean_val) / std_val
+                    
+                    # 정규분포 가정 하에 합격률 계산
+                    prob_above_lsl = stats.norm.cdf(z_lsl)
+                    prob_below_usl = stats.norm.cdf(z_usl)
+                    
+                    # 규격 내 비율(%)
+                    yield_rate = (prob_below_usl - prob_above_lsl) * 100
+                    # 불량률(PPM)
+                    defect_rate_ppm = (1 - (prob_below_usl - prob_above_lsl)) * 1000000
+                    
                     # 계산 방법 표시
                     method_used = "정규분포 가정"
                     
@@ -304,6 +569,15 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     ppl = (p50 - lsl) / (p50 - p00135)
                     ppk = min(ppu, ppl)
                     
+                    # 비모수적 방법으로 합격률 계산 (실제 데이터 분포 사용)
+                    within_spec = ((var_data >= lsl) & (var_data <= usl)).sum()
+                    total_count = len(var_data)
+                    
+                    # 규격 내 비율(%)
+                    yield_rate = (within_spec / total_count) * 100
+                    # 불량률(PPM)
+                    defect_rate_ppm = ((total_count - within_spec) / total_count) * 1000000
+                    
                     # 기존 변수에 매핑하여 기존 코드와 호환성 유지
                     cp = pp
                     cpu = ppu
@@ -318,6 +592,8 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 cpu = np.nan
                 cpl = np.nan
                 cpk = np.nan
+                yield_rate = np.nan
+                defect_rate_ppm = np.nan
                 method_used = "계산 불가"
             
             # 공정관리도 (Run Chart) - Plotly 사용
@@ -440,9 +716,111 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 st.warning(f"⚠️ 정규성 검정 결과: {normality_result} ({shapiro_result})")
                 st.info("🔍 비모수적 방법(백분위수 기반)을 사용하여 공정능력지수를 계산합니다.")
             
-            metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
-            
-            with metrics_col1:
+            # 정규성 시각화(QQ-Plot) 부분을 Plotly로 변경
+            # 새로운 Plotly QQ-Plot 코드로 변경
+            st.subheader("정규성 시각화 (QQ Plot)")
+            st.caption("QQ Plot은 데이터가 정규분포를 따르는지 시각적으로 확인할 수 있는 도구입니다. 직선에 가까울수록 정규분포에 가깝습니다.")
+
+            # QQ 플롯 데이터 생성
+            qq_data = stats.probplot(var_data, dist="norm", fit=True)
+            theoretical_quantiles = qq_data[0][0]
+            sample_quantiles = qq_data[0][1]
+            slope, intercept, r = qq_data[1]
+
+            # Plotly QQ Plot 생성
+            fig_qq = go.Figure()
+
+            # 데이터 포인트 추가
+            fig_qq.add_trace(go.Scatter(
+                x=theoretical_quantiles, 
+                y=sample_quantiles,
+                mode='markers',
+                name='데이터',
+                marker=dict(color='blue', size=8),
+                hovertemplate='이론적 분위수: %{x:.2f}<br>실제 분위수: %{y:.2f}<extra></extra>'
+            ))
+
+            # 참조선(직선) 추가
+            line_x = np.linspace(min(theoretical_quantiles), max(theoretical_quantiles), 100)
+            line_y = slope * line_x + intercept
+            fig_qq.add_trace(go.Scatter(
+                x=line_x, 
+                y=line_y,
+                mode='lines',
+                name='참조선',
+                line=dict(color='red', width=2, dash='solid'),
+                hovertemplate='이론적 분위수: %{x:.2f}<br>예상 분위수: %{y:.2f}<extra></extra>'
+            ))
+
+            # 레이아웃 설정
+            fig_qq.update_layout(
+                title=f"Normal Q-Q Plot (R² = {r**2:.4f})",
+                xaxis_title='이론적 분위수 (Theoretical Quantiles)',
+                yaxis_title='실제 분위수 (Sample Quantiles)',
+                hovermode='closest',
+                height=500,
+                margin=dict(t=50, b=50, l=50, r=50),
+                showlegend=True
+            )
+
+            # 그리드 추가
+            fig_qq.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+            fig_qq.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+
+            # Plotly 그래프 표시
+            display_plotly_centered(fig_qq)
+
+            # QQ-Plot 해석
+            if normality_result == "정규 분포 (p >= 0.05)":
+                r_squared = r**2
+                if r_squared > 0.95:
+                    st.success(f"✅ QQ Plot 해석: 데이터가 정규분포를 매우 잘 따릅니다. (R² = {r_squared:.4f})")
+                else:
+                    st.success(f"✅ QQ Plot 해석: 데이터가 대체로 정규분포를 따릅니다. (R² = {r_squared:.4f})")
+            else:
+                r_squared = r**2
+                if r_squared < 0.90:
+                    st.warning(f"⚠️ QQ Plot 해석: 데이터가 정규분포를 따르지 않습니다. (R² = {r_squared:.4f})")
+                else:
+                    st.warning(f"⚠️ QQ Plot 해석: 데이터가 정규분포와 약간 차이가 있습니다. (R² = {r_squared:.4f})")
+
+            # 합격률 및 공정능력 지수 표시
+            st.subheader("합격률 및 공정능력 지수")
+
+            # 합격률과 불량률 표시 - 3개 컬럼으로 분할
+            metrics_row1_col1, metrics_row1_col2, metrics_row1_col3 = st.columns(3)
+
+            with metrics_row1_col1:
+                if not np.isnan(yield_rate):
+                    st.metric("합격률", f"{yield_rate:.2f}%", 
+                            delta="양호" if yield_rate >= 99.73 else 
+                                 "주의" if yield_rate >= 95 else 
+                                 "개선필요")
+                    st.caption("규격 내 제품 비율")
+                else:
+                    st.metric("합격률", "N/A")
+                    st.caption("계산 불가")
+
+            with metrics_row1_col2:
+                if not np.isnan(defect_rate_ppm):
+                    st.metric("불량률", f"{defect_rate_ppm:.0f} PPM", 
+                            delta="양호" if defect_rate_ppm <= 2700 else 
+                                 "주의" if defect_rate_ppm <= 50000 else 
+                                 "개선필요",
+                            delta_color="inverse")
+                    st.caption("백만 개당 불량 개수")
+                else:
+                    st.metric("불량률", "N/A")
+                    st.caption("계산 불가")
+
+            with metrics_row1_col3:
+                st.metric("분석 방법", method_used)
+                st.caption("데이터 특성에 따른 방법")
+
+            # 기존 공정능력지수 표시
+            metrics_row2_col1, metrics_row2_col2, metrics_row2_col3, metrics_row2_col4 = st.columns(4)
+
+            with metrics_row2_col1:
                 # 공정능력지수 표시
                 cp_display = f"{cp:.2f}" if not np.isnan(cp) else "N/A"
                 cp_name = "Cp" if normality_result == "정규 분포 (p >= 0.05)" else "Pp"
@@ -451,8 +829,8 @@ if 'data' in st.session_state and st.session_state.data is not None:
                                "적합" if not np.isnan(cp) and cp >= 1.33 else
                                "부적합" if not np.isnan(cp) and cp < 1 else "계산 불가")
                 st.caption("공정의 산포가 규격 대비 얼마나 좁은지")
-            
-            with metrics_col2:
+
+            with metrics_row2_col2:
                 cpk_display = f"{cpk:.2f}" if not np.isnan(cpk) else "N/A"
                 cpk_name = "Cpk" if normality_result == "정규 분포 (p >= 0.05)" else "Ppk"
                 st.metric(cpk_name, cpk_display, 
@@ -460,221 +838,485 @@ if 'data' in st.session_state and st.session_state.data is not None:
                                "적합" if not np.isnan(cpk) and cpk >= 1.33 else
                                "부적합" if not np.isnan(cpk) and cpk < 1 else "계산 불가")
                 st.caption("공정 산포와 중심위치를 모두 고려한 지수")
-            
-            with metrics_col3:
+
+            with metrics_row2_col3:
                 cpu_display = f"{cpu:.2f}" if not np.isnan(cpu) else "N/A"
                 cpu_name = "Cpu" if normality_result == "정규 분포 (p >= 0.05)" else "Ppu"
                 st.metric(cpu_name, cpu_display)
                 st.caption("상한규격 기준 공정능력")
-            
-            with metrics_col4:
+
+            with metrics_row2_col4:
                 cpl_display = f"{cpl:.2f}" if not np.isnan(cpl) else "N/A"
                 cpl_name = "Cpl" if normality_result == "정규 분포 (p >= 0.05)" else "Ppl"
                 st.metric(cpl_name, cpl_display)
                 st.caption("하한규격 기준 공정능력")
-            
-            # 통계 요약 테이블
-            st.subheader('통계 요약')
-            
-            stats_df = pd.DataFrame({
-                '통계량': ['평균', '표준편차', '중앙값', '최소값', '최대값', 'LSL', 'USL', 
-                        f'{cp_name}', f'{cpk_name}', '계산 방법'],
-                '값': [f'{mean_val:.2f}', f'{std_val:.2f}', f'{np.median(var_data):.2f}', 
-                      f'{min_val:.2f}', f'{max_val:.2f}', f'{lsl:.2f}', f'{usl:.2f}', 
-                      cp_display, cpk_display, method_used]
-            })
-            
-            st.table(stats_df)
-            
-            # 공정능력 해석
-            st.subheader('공정능력 판정')
-            
-            # 공정능력 해석을 표로 정리
-            interpretation_df = pd.DataFrame(columns=["지표", "값", "판정", "개선 방향"])
-            
-            # Cp/Pp 해석
-            cp_name = "Cp" if normality_result == "정규 분포 (p >= 0.05)" else "Pp"
-            if np.isnan(cp):
-                cp_judgment = "계산 불가"
-                cp_action = "데이터 확인 필요"
-            elif cp >= 1.33:
-                cp_judgment = "우수함"
-                cp_action = "현상 유지"
-            elif cp >= 1.0:
-                cp_judgment = "적절함"
-                cp_action = "지속적 개선 필요"
-            else:
-                cp_judgment = "부적합"
-                cp_action = "공정 산포 감소 필요"
-                
-            # Cpk/Ppk 해석
-            cpk_name = "Cpk" if normality_result == "정규 분포 (p >= 0.05)" else "Ppk"
-            if np.isnan(cpk):
-                cpk_judgment = "계산 불가"
-                cpk_action = "데이터 확인 필요"
-            elif cpk >= 1.33:
-                cpk_judgment = "우수함"
-                cpk_action = "현상 유지"
-            elif cpk >= 1.0:
-                cpk_judgment = "적절함"
-                cpk_action = "중심 조정 또는 산포 감소 필요"
-            else:
-                cpk_judgment = "부적합"
-                cpk_action = "공정 중심 조정 및 산포 감소 시급"
-                
-            # 중심 치우침 해석
-            central_value = mean_val if normality_result == "정규 분포 (p >= 0.05)" else np.median(var_data)
-            if abs(central_value - (usl + lsl) / 2) > std_val:
-                center_judgment = "치우침 있음"
-                center_action = "공정 중심 조정 필요"
-            else:
-                center_judgment = "양호함"
-                center_action = "현상 유지"
-                
-            # 정규성 해석
-            if normality_result == "정규 분포 (p >= 0.05)":
-                normal_judgment = "정규 분포"
-                normal_action = "표준 공정능력분석 적용 가능"
-            else:
-                normal_judgment = "비정규 분포"
-                normal_action = "비모수적 방법 사용 중"
-            
-            # 데이터프레임에 추가
-            interpretation_df.loc[0] = [f"공정능력({cp_name})", cp_display, cp_judgment, cp_action]
-            interpretation_df.loc[1] = [f"공정능력지수K({cpk_name})", cpk_display, cpk_judgment, cpk_action]
-            interpretation_df.loc[2] = ["공정 중심", f"{central_value:.2f}", center_judgment, center_action]
-            interpretation_df.loc[3] = ["정규성", f"{shapiro_result}", normal_judgment, normal_action]
-            
-            st.table(interpretation_df)
-            
-            # 종합 해석
-            if not np.isnan(cp) and not np.isnan(cpk):
-                if cp >= 1.33 and cpk >= 1.33:
-                    st.success('✅ 종합 판정: 공정이 안정적이며 규격에 대한 여유도가 충분합니다.')
-                elif cp >= 1.0 and cpk >= 1.0:
-                    st.warning('⚠️ 종합 판정: 공정이 규격을 만족하나, 개선의 여지가 있습니다.')
-                else:
-                    st.error('❌ 종합 판정: 공정이 불안정하거나 규격을 벗어날 위험이 있습니다. 개선이 필요합니다.')
-            else:
-                st.error('❌ 종합 판정: 공정능력 지수 계산에 문제가 있습니다. 데이터와 규격을 확인하세요.')
-            
-            # 실용적인 조언 추가
-            st.subheader("💡 개선 방안")
-            
-            # 정규성에 따른 추가 설명
-            if normality_result != "정규 분포 (p >= 0.05)":
-                st.info("""
-                📌 **비정규 분포 데이터에 대한 참고 사항**:
-                - 백분위수 기반 계산법(Pp, Ppk)이 사용되었습니다.
-                - 정규성을 가정한 지표(Cp, Cpk)보다 더 보수적인 평가일 수 있습니다.
-                - 데이터 변환(로그, 제곱근 등)을 통해 정규성을 개선할 수 있는지 검토해보세요.
-                """)
-            
-            if not np.isnan(cp) and not np.isnan(cpk):
-                if cp < cpk:
-                    st.info("이론적으로 Cp는 항상 Cpk보다 크거나 같아야 합니다. 데이터를 재확인하세요.")
-                elif cp > cpk:
-                    # 정규성에 따라 다른 메시지 표시
-                    central_term = "평균" if normality_result == "정규 분포 (p >= 0.05)" else "중앙값"
-                    st.info(f"공정 중심({central_term})을 규격 중심({(usl+lsl)/2:.2f})에 맞추면 {cpk_name}를 {cp:.2f}까지 향상시킬 수 있습니다.")
-                
-                if not np.isnan(cpk) and cpk < 1.0:
-                    if not np.isnan(cpu) and not np.isnan(cpl):
-                        if cpu < cpl:
-                            st.info(f"공정 {central_term}을 낮추면 {cpk_name}를 개선할 수 있습니다.")
-                        elif cpl < cpu:
-                            st.info(f"공정 {central_term}을 높이면 {cpk_name}를 개선할 수 있습니다.")
-            
-            # 공정능력 시각적 해석 (시각화 도움말)
-            with st.expander("📊 그래프 해석 방법"):
-                st.markdown(f"""
-                ### 공정관리도 해석
-                - **빨간 점선(±3σ)**: 관리 한계선으로, 이 범위를 벗어나면 공정이 불안정할 수 있습니다.
-                - **초록 실선(평균)**: 공정의 중심을 나타냅니다.
-                - **보라색 점선(USL/LSL)**: 제품 규격 한계를 나타냅니다.
-                
-                ### 히스토그램 해석
-                - **정규분포 여부**: p값이 0.05 이상이면 정규분포로 간주합니다(현재 p={shapiro_result}).
-                - **종 모양에 가까울수록**: 정규분포를 따르는 안정적인 공정입니다.
-                - **규격선(USL/LSL)이 분포 바깥에 있을수록**: 공정능력이 우수합니다.
-                - **규격선이 분포 안에 있다면**: 불량품 발생 가능성이 있습니다.
-                
-                ### {cp_name}와 {cpk_name}의 차이
-                - **{cp_name}**: 이상적인 공정 능력(산포만 고려)
-                - **{cpk_name}**: 실제 공정 능력(산포와 중심 모두 고려)
-                """)
-                
-                # 정규성에 따른 추가 설명
-                if normality_result != "정규 분포 (p >= 0.05)":
-                    st.markdown("""
-                    ### 비모수적 방법(백분위수)에 대한 추가 설명
-                    - **Pp**: 99.865% 및 0.135% 백분위수 간의 거리로 계산됩니다.
-                    - **Ppk**: 중앙값과 99.865% 또는 0.135% 백분위수 사이의 거리 중 작은 값으로 계산됩니다.
-                    - 이 방식은 데이터가 정규분포를 따르지 않을 때 더 정확한 공정능력을 평가합니다.
-                    """)
 
-            # 비모수적 방법에 대한 추가 설명을 여기에 넣으세요
-            if normality_result != "정규 분포 (p >= 0.05)":
-                with st.expander("🔍 비모수적 공정능력지수(Pp, Ppk) 쉽게 이해하기"):
-                    st.markdown("""
-                    ### 비모수적 공정능력지수 쉽게 이해하기
+            # 분포 및 합격률 시각화를 Plotly로 변경
+            # 히스토그램과 분포 시각화 - 합격률 시각적 표현
+            st.subheader("분포 및 합격률 시각화")
+
+            # 히스토그램 데이터 준비
+            hist_values, hist_bins = np.histogram(var_data, bins=20, density=True)
+            bin_centers = (hist_bins[:-1] + hist_bins[1:]) / 2
+            bin_width = hist_bins[1] - hist_bins[0]
+
+            # Plotly 분포 시각화
+            fig_hist = go.Figure()
+
+            # 히스토그램 추가
+            fig_hist.add_trace(go.Bar(
+                x=bin_centers,
+                y=hist_values,
+                width=bin_width * 0.9,
+                name='관측 데이터',
+                marker_color='skyblue',
+                hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
+            ))
+
+            # 범위 설정
+            x_range = np.linspace(min_val - 0.5*std_val, max_val + 0.5*std_val, 200)
+
+            # 밀도 곡선 추가 (정규분포 또는 KDE)
+            if normality_result == "정규 분포 (p >= 0.05)":
+                # 정규분포 곡선
+                y_norm = stats.norm.pdf(x_range, mean_val, std_val)
+                fig_hist.add_trace(go.Scatter(
+                    x=x_range,
+                    y=y_norm,
+                    mode='lines',
+                    name='정규분포 곡선',
+                    line=dict(color='blue', width=2),
+                    hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
+                ))
+            else:
+                # KDE 곡선
+                kde = gaussian_kde(var_data)
+                y_kde = kde(x_range)
+                fig_hist.add_trace(go.Scatter(
+                    x=x_range,
+                    y=y_kde,
+                    mode='lines',
+                    name='KDE 곡선',
+                    line=dict(color='blue', width=2),
+                    hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
+                ))
+
+            # 규격 이탈 영역 (LSL 미만) 추가
+            x_lsl = np.linspace(min_val - 0.5*std_val, lsl, 50)
+            if normality_result == "정규 분포 (p >= 0.05)":
+                y_lsl = stats.norm.pdf(x_lsl, mean_val, std_val)
+            else:
+                kde = gaussian_kde(var_data)
+                y_lsl = kde(x_lsl)
+
+            fig_hist.add_trace(go.Scatter(
+                x=x_lsl,
+                y=y_lsl,
+                mode='none',
+                name='하한 규격 이탈',
+                fill='tozeroy',
+                fillcolor='rgba(255, 0, 0, 0.3)',
+                hoverinfo='skip'
+            ))
+
+            # 규격 이탈 영역 (USL 초과) 추가
+            x_usl = np.linspace(usl, max_val + 0.5*std_val, 50)
+            if normality_result == "정규 분포 (p >= 0.05)":
+                y_usl = stats.norm.pdf(x_usl, mean_val, std_val)
+            else:
+                kde = gaussian_kde(var_data)
+                y_usl = kde(x_usl)
+
+            fig_hist.add_trace(go.Scatter(
+                x=x_usl,
+                y=y_usl,
+                mode='none',
+                name='상한 규격 이탈',
+                fill='tozeroy',
+                fillcolor='rgba(255, 0, 0, 0.3)',
+                hoverinfo='skip'
+            ))
+
+            # 수직선 추가
+            # LSL, USL 수직선
+            fig_hist.add_trace(go.Scatter(
+                x=[lsl, lsl],
+                y=[0, max(hist_values)*1.2],
+                mode='lines',
+                name='하한규격(LSL)',
+                line=dict(color='red', width=2, dash='dash'),
+                hovertemplate=f'LSL: {lsl:.2f}<extra></extra>'
+            ))
+
+            fig_hist.add_trace(go.Scatter(
+                x=[usl, usl],
+                y=[0, max(hist_values)*1.2],
+                mode='lines',
+                name='상한규격(USL)',
+                line=dict(color='red', width=2, dash='dash'),
+                hovertemplate=f'USL: {usl:.2f}<extra></extra>'
+            ))
+
+            # 평균선
+            fig_hist.add_trace(go.Scatter(
+                x=[mean_val, mean_val],
+                y=[0, max(hist_values)*1.2],
+                mode='lines',
+                name='평균',
+                line=dict(color='green', width=2),
+                hovertemplate=f'평균: {mean_val:.2f}<extra></extra>'
+            ))
+
+            # +/-3σ 선
+            fig_hist.add_trace(go.Scatter(
+                x=[mean_val + 3*std_val, mean_val + 3*std_val],
+                y=[0, max(hist_values)*1.2],
+                mode='lines',
+                name='+3σ',
+                line=dict(color='orange', width=1.5, dash='dot'),
+                hovertemplate=f'+3σ: {mean_val + 3*std_val:.2f}<extra></extra>'
+            ))
+
+            fig_hist.add_trace(go.Scatter(
+                x=[mean_val - 3*std_val, mean_val - 3*std_val],
+                y=[0, max(hist_values)*1.2],
+                mode='lines',
+                name='-3σ',
+                line=dict(color='orange', width=1.5, dash='dot'),
+                hovertemplate=f'-3σ: {mean_val - 3*std_val:.2f}<extra></extra>'
+            ))
+
+            # 레이아웃 설정
+            fig_hist.update_layout(
+                title=f'{selected_var} 분포 및 합격률 (합격률: {yield_rate:.2f}%)',
+                xaxis_title='값',
+                yaxis_title='확률 밀도',
+                hovermode='closest',
+                height=500,
+                showlegend=True,
+                margin=dict(t=50, b=50, l=50, r=50),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+
+            # 그리드 추가
+            fig_hist.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+            fig_hist.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+
+            # Plotly 그래프 표시
+            display_plotly_centered(fig_hist)
+
+            # 시뮬레이션을 위한 기본값 설정 (오류 수정)
+            # 시뮬레이션 분포 매개변수 설정
+            st.write("#### 시뮬레이션 설정")
+            sim_col1, sim_col2 = st.columns(2)
+            
+            with sim_col1:
+                sim_mean = st.slider(
+                    "평균 조정",
+                    min_value=float(mean_val - 3*std_val),
+                    max_value=float(mean_val + 3*std_val),
+                    value=float(mean_val),
+                    step=float(std_val/10),
+                    format="%.2f",
+                    help="공정 평균값을 조정하여 시뮬레이션합니다."
+                )
+            
+            with sim_col2:
+                sim_std = st.slider(
+                    "표준편차 조정",
+                    min_value=float(std_val * 0.5),
+                    max_value=float(std_val * 1.5),
+                    value=float(std_val),
+                    step=float(std_val/20),
+                    format="%.2f",
+                    help="공정 표준편차를 조정하여 시뮬레이션합니다."
+                )
+            
+            # 시뮬레이션 공정능력지수 계산
+            if std_val > 0 and sim_std > 0:
+                # 정규성을 만족하는 경우의 공정능력지수 (시뮬레이션)
+                sim_cp = (usl - lsl) / (6 * sim_std)
+                sim_cpu = (usl - sim_mean) / (3 * sim_std)
+                sim_cpl = (sim_mean - lsl) / (3 * sim_std)
+                sim_cpk = min(sim_cpu, sim_cpl)
+                
+                # 정규분포 가정 하에 합격률 계산 (시뮬레이션)
+                sim_z_usl = (usl - sim_mean) / sim_std
+                sim_z_lsl = (lsl - sim_mean) / sim_std
+                
+                sim_prob_above_lsl = stats.norm.cdf(sim_z_lsl)
+                sim_prob_below_usl = stats.norm.cdf(sim_z_usl)
+                
+                # 규격 내 비율(%) (시뮬레이션)
+                sim_yield_rate = (sim_prob_below_usl - sim_prob_above_lsl) * 100
+                # 불량률(PPM) (시뮬레이션)
+                sim_defect_rate_ppm = (1 - (sim_prob_below_usl - sim_prob_above_lsl)) * 1000000
+            else:
+                st.warning("표준편차가 0입니다. 시뮬레이션을 계산할 수 없습니다.")
+                sim_cp = np.nan
+                sim_cpk = np.nan
+                sim_yield_rate = np.nan
+                sim_defect_rate_ppm = np.nan
+            
+            # 시뮬레이션 결과 표시
+            sim_metrics_col1, sim_metrics_col2, sim_metrics_col3 = st.columns(3)
+            
+            with sim_metrics_col1:
+                st.metric(
+                    "시뮬레이션 합격률", 
+                    f"{sim_yield_rate:.2f}%", 
+                    delta=f"{sim_yield_rate - yield_rate:.2f}%"
+                )
+            
+            with sim_metrics_col2:
+                st.metric(
+                    f"시뮬레이션 {cpk_name}", 
+                    f"{sim_cpk:.2f}", 
+                    delta=f"{sim_cpk - cpk:.2f}"
+                )
+            
+            with sim_metrics_col3:
+                st.metric(
+                    "시뮬레이션 불량률", 
+                    f"{sim_defect_rate_ppm:.0f} PPM", 
+                    delta=f"{defect_rate_ppm - sim_defect_rate_ppm:.0f} PPM",
+                    delta_color="inverse"
+                )
+
+            # 시뮬레이션 분포 변화 시각화를 Plotly로 변경
+            # 분포 변화 시각화
+            st.write("#### 분포 변화 시각화")
+
+            # Plotly 시뮬레이션 시각화
+            fig_sim = go.Figure()
+
+            # x 범위 설정
+            x_sim = np.linspace(
+                min(min_val, sim_mean - 4*sim_std), 
+                max(max_val, sim_mean + 4*sim_std), 
+                200
+            )
+
+            # 현재 히스토그램 추가
+            hist_values, hist_bins = np.histogram(var_data, bins=20, density=True)
+            bin_centers = (hist_bins[:-1] + hist_bins[1:]) / 2
+            bin_width = hist_bins[1] - hist_bins[0]
+
+            fig_sim.add_trace(go.Bar(
+                x=bin_centers,
+                y=hist_values,
+                width=bin_width * 0.9,
+                name='현재 데이터',
+                marker_color='rgba(135, 206, 235, 0.5)',
+                hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
+            ))
+
+            # 현재 분포 곡선 추가
+            if normality_result == "정규 분포 (p >= 0.05)":
+                y_current = stats.norm.pdf(x_sim, mean_val, std_val)
+                curve_name = '현재 정규분포 곡선'
+            else:
+                kde = gaussian_kde(var_data)
+                y_current = kde(x_sim)
+                curve_name = '현재 KDE 곡선'
+
+            fig_sim.add_trace(go.Scatter(
+                x=x_sim,
+                y=y_current,
+                mode='lines',
+                name=curve_name,
+                line=dict(color='blue', width=2, dash='dash'),
+                hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
+            ))
+
+            # 시뮬레이션 분포 곡선 추가
+            y_sim = stats.norm.pdf(x_sim, sim_mean, sim_std)
+            fig_sim.add_trace(go.Scatter(
+                x=x_sim,
+                y=y_sim,
+                mode='lines',
+                name='시뮬레이션 분포',
+                line=dict(color='red', width=2.5),
+                hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
+            ))
+
+            # 규격선 추가
+            fig_sim.add_trace(go.Scatter(
+                x=[lsl, lsl],
+                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
+                mode='lines',
+                name='하한규격(LSL)',
+                line=dict(color='purple', width=2, dash='dash'),
+                hovertemplate=f'LSL: {lsl:.2f}<extra></extra>'
+            ))
+
+            fig_sim.add_trace(go.Scatter(
+                x=[usl, usl],
+                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
+                mode='lines',
+                name='상한규격(USL)',
+                line=dict(color='purple', width=2, dash='dash'),
+                hovertemplate=f'USL: {usl:.2f}<extra></extra>'
+            ))
+
+            # 평균선 추가
+            fig_sim.add_trace(go.Scatter(
+                x=[mean_val, mean_val],
+                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
+                mode='lines',
+                name='현재 평균',
+                line=dict(color='blue', width=2),
+                hovertemplate=f'현재 평균: {mean_val:.2f}<extra></extra>'
+            ))
+
+            fig_sim.add_trace(go.Scatter(
+                x=[sim_mean, sim_mean],
+                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
+                mode='lines',
+                name='시뮬레이션 평균',
+                line=dict(color='red', width=2),
+                hovertemplate=f'시뮬레이션 평균: {sim_mean:.2f}<extra></extra>'
+            ))
+
+            # 레이아웃 설정
+            fig_sim.update_layout(
+                title='시뮬레이션: 현재 분포 vs 조정된 분포',
+                xaxis_title='값',
+                yaxis_title='확률 밀도',
+                hovermode='closest',
+                height=500,
+                showlegend=True,
+                margin=dict(t=50, b=50, l=50, r=50),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+
+            # 그리드 추가
+            fig_sim.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+            fig_sim.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+
+            # Plotly 그래프 표시
+            display_plotly_centered(fig_sim)
+
+            # 시뮬레이션 결과 해석
+            st.write("#### 시뮬레이션 결과 해석")
+
+            # 시뮬레이션 합격률 해석
+            if sim_yield_rate > yield_rate:
+                st.success(f"✅ 변경된 공정 파라미터로 합격률이 {yield_rate:.2f}%에서 {sim_yield_rate:.2f}%로 {sim_yield_rate - yield_rate:.2f}% 증가했습니다.")
+            else:
+                st.error(f"❌ 변경된 공정 파라미터로 합격률이 {yield_rate:.2f}%에서 {sim_yield_rate:.2f}%로 {yield_rate - sim_yield_rate:.2f}% 감소했습니다.")
+
+            # Cpk 개선 해석
+            if sim_cpk > cpk:
+                st.success(f"✅ {cpk_name}가 {cpk:.2f}에서 {sim_cpk:.2f}로 개선되었습니다.")
+                
+                if sim_cpk >= 1.33 and cpk < 1.33:
+                    st.info("🎯 이 변경으로 공정능력이 '적절' 또는 '주의 필요' 수준에서 '우수' 수준으로 향상되었습니다.")
+                elif sim_cpk >= 1.0 and cpk < 1.0:
+                    st.info("🎯 이 변경으로 공정능력이 '부적합' 수준에서 '적절' 수준으로 향상되었습니다.")
+            else:
+                st.error(f"❌ {cpk_name}가 {cpk:.2f}에서 {sim_cpk:.2f}로 감소했습니다.")
+
+            # 상세 개선사항 분석
+            st.write("#### 상세 개선 분석")
+
+            # 개선 원인 파악
+            if abs(sim_mean - (usl + lsl) / 2) < abs(mean_val - (usl + lsl) / 2):
+                st.write("✅ 공정 중심이 규격 중심에 더 가까워졌습니다. (중심 이탈 감소)")
+            elif abs(sim_mean - (usl + lsl) / 2) > abs(mean_val - (usl + lsl) / 2):
+                st.write("❌ 공정 중심이 규격 중심에서 더 멀어졌습니다. (중심 이탈 증가)")
+
+            if sim_std < std_val:
+                st.write(f"✅ 공정 산포(표준편차)가 {std_val:.2f}에서 {sim_std:.2f}로 {(1-(sim_std/std_val))*100:.1f}% 감소했습니다.")
+            elif sim_std > std_val:
+                st.write(f"❌ 공정 산포(표준편차)가 {std_val:.2f}에서 {sim_std:.2f}로 {((sim_std/std_val)-1)*100:.1f}% 증가했습니다.")
+
+            # 시뮬레이션 결과를 바탕으로 한 권장 조치
+            st.write("#### 권장 조치")
+
+            if sim_cpk > cpk:
+                st.write("🔍 **시뮬레이션 결과가 현재보다 개선되었습니다. 다음 조치를 고려하세요:**")
+                
+                if abs(sim_mean - (usl + lsl) / 2) < abs(mean_val - (usl + lsl) / 2):
+                    st.write(f"1. 공정 중심을 현재 {mean_val:.2f}에서 {sim_mean:.2f}로 조정")
                     
-                    #### 왜 Pp와 Ppk가 필요한가요?
-                    - 많은 실제 공정 데이터는 종 모양의 정규분포를 따르지 않습니다.
-                    - 데이터가 정규분포가 아닐 때 기존 Cp, Cpk를 사용하면 **잘못된 결론**을 내릴 수 있습니다.
-                    - Pp와 Ppk는 데이터의 분포 형태에 상관없이 사용할 수 있는 **더 신뢰할 수 있는 지표**입니다.
-                    
-                    #### 쉽게 설명하자면...
-                    - **Cp/Cpk**: "데이터가 종 모양이라고 가정하고" 공정 능력을 평가
-                    - **Pp/Ppk**: "데이터의 실제 모양을 그대로 반영해서" 공정 능력을 평가
-                    
-                    #### 실제 예시로 이해하기
-                    마치 키 180cm인 사람을 기준으로 만든 옷을 모든 사람에게 맞춰보는 것(Cp/Cpk)과, 
-                    각 사람의 실제 치수를 측정해서 맞춤 옷을 만드는 것(Pp/Ppk)의 차이라고 볼 수 있습니다.
-                    
-                    #### 계산 방식의 차이
-                    - **Cp**: 표준편차(σ)를 사용 → 정규분포 가정에 의존
-                    - **Pp**: 백분위수(99.865%와 0.135% 사이 간격)를 사용 → 실제 데이터 분포 반영
-                    
-                    #### 간단히 말하면
-                    - **Pp** = 규격 폭 ÷ 데이터의 실제 퍼짐 정도
-                    - **Ppk** = 규격 한계선과 데이터 중심(중앙값) 사이의 가장 가까운 거리 ÷ 데이터의 한쪽 퍼짐 정도
-                    
-                    #### 판단 기준은 동일합니다
-                    - Pp, Ppk ≥ 1.33: 우수한 공정
-                    - 1.00 ≤ Pp, Ppk < 1.33: 적절한 공정
-                    - Pp, Ppk < 1.00: 개선이 필요한 공정
-                    """)
-                    
-                    # 시각적 설명을 위한 간단한 다이어그램 (선택적)
-                    fig, ax = plt.subplots(figsize=(8, 4))
-                    x = np.linspace(-4, 4, 1000)
-                    y1 = stats.norm.pdf(x, 0, 1)  # 정규분포
-                    y2 = stats.skewnorm.pdf(x, 5, 0, 1.5)  # 비대칭분포
-                    
-                    ax.plot(x, y1, 'b-', label='정규분포 (Cp/Cpk 적합)')
-                    ax.plot(x, y2, 'r-', label='비대칭분포 (Pp/Ppk 필요)')
-                    
-                    # 정규분포의 ±3σ 지점
-                    ax.axvline(x=-3, color='blue', linestyle='--', alpha=0.5)
-                    ax.axvline(x=3, color='blue', linestyle='--', alpha=0.5)
-                    
-                    # 비대칭분포의 0.135% 및 99.865% 백분위수 지점
-                    p_low = stats.skewnorm.ppf(0.00135, 5, 0, 1.5)
-                    p_high = stats.skewnorm.ppf(0.99865, 5, 0, 1.5)
-                    ax.axvline(x=p_low, color='red', linestyle='--', alpha=0.5)
-                    ax.axvline(x=p_high, color='red', linestyle='--', alpha=0.5)
-                    
-                    ax.set_title('정규분포와 비대칭분포 비교')
-                    ax.set_xlabel('값')
-                    ax.set_ylabel('밀도')
-                    ax.legend()
-                    ax.grid(True, alpha=0.3)
-                    
-                    st.pyplot(fig)
-        else:
-            st.error(f"선택한 변수 '{selected_var}'에 유효한 데이터가 없습니다.")
-    else:
-        st.error("분석할 숫자형 변수가 없습니다.")
+                    # 구체적인 방법 제안
+                    center_diff = sim_mean - mean_val
+                    if center_diff > 0:
+                        st.write(f"   - 목표값을 {center_diff:.2f} 단위 상향 조정")
+                    else:
+                        st.write(f"   - 목표값을 {abs(center_diff):.2f} 단위 하향 조정")
+                
+                if sim_std < std_val:
+                    st.write(f"2. 공정 산포를 현재 {std_val:.2f}에서 {sim_std:.2f}로 감소")
+                    st.write("   - 프로세스 변동 원인 분석 및 제거")
+                    st.write("   - 작업자 교육 및 표준 작업 지침 개선")
+                    st.write("   - 설비 안정성 향상 및 유지보수 개선")
+            else:
+                st.write("❌ **시뮬레이션 결과가 현재보다 악화되었습니다. 다음 사항을 고려하세요:**")
+                st.write("1. 다른 매개변수 조합으로 시뮬레이션 재시도")
+                
+                # 최적 조건 제안
+                optimal_mean = (usl + lsl) / 2
+                st.write(f"2. 규격 중심({optimal_mean:.2f})에 가까운 공정 중심 설정 고려")
+                st.write("3. 표준편차 감소를 위한 공정 안정화 먼저 시도")
+
+        # --- 보고서 다운로드 섹션 시작 ---
+        # st.write("--- DEBUG: Reached download section --- ") # 디버깅 제거
+        st.subheader("📊 보고서 다운로드")
+        st.write("분석 결과를 다운로드하여 저장하거나 공유할 수 있습니다.")
+        
+        # 다운로드 버튼 (st.columns 임시 제거)
+        
+        # CSV 다운로드 버튼
+        try: # CSV 생성/버튼 오류 방지
+            # st.write("--- DEBUG: Creating CSV button --- ") # 디버깅 제거
+            csv_data = create_csv_data()
+            csv_filename = f"{selected_var}_공정능력분석_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            
+            st.download_button(
+                label="CSV 파일로 다운로드",
+                data=csv_data,
+                file_name=csv_filename,
+                mime="text/csv",
+                help="분석 결과와 데이터를 CSV 파일로 다운로드합니다. 모든 분석 결과값과 원본 데이터가 포함됩니다."
+            )
+            st.caption("💡 CSV 파일은 추가 분석이나 데이터 저장에 적합합니다.")
+            # st.write("--- DEBUG: CSV button created successfully --- ") # 디버깅 제거
+        except Exception as e:
+            st.error(f"CSV 다운로드 버튼 생성 중 오류: {e}")
+            # st.write(f"--- DEBUG: Error creating CSV button: {e} --- ") # 디버깅 제거
+        
+        # HTML 보고서 다운로드 버튼 (그래프 제외 버전)
+        try: # HTML 생성/버튼 오류 방지
+            # st.write("--- DEBUG: Attempting to create HTML report (No Graphs) --- ") # 디버깅 제거
+            html_report = create_html_report() # 그래프 없는 버전 호출
+            # st.write(f"--- DEBUG: create_html_report (No Graphs) returned ... ") # 디버깅 제거
+            
+            if html_report and isinstance(html_report, str) and len(html_report) > 100: 
+                # st.write("--- DEBUG: HTML report (No Graphs) is valid ... ") # 디버깅 제거
+                html_filename = f"{selected_var}_공정능력분석_보고서(그래프제외)_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.html"
+                
+                st.download_button(
+                    label="HTML 보고서 다운로드 (그래프 제외)", # 라벨 수정
+                    data=html_report,
+                    file_name=html_filename,
+                    mime="text/html",
+                    help="분석 결과와 해석이 포함된 보고서를 HTML 형식으로 다운로드합니다. (그래프는 포함되지 않음)" # 도움말 수정
+                )
+                st.caption("💡 HTML 보고서는 분석 결과와 해석만 포함합니다.") # 캡션 수정
+                # st.write("--- DEBUG: HTML button (No Graphs) created successfully --- ") # 디버깅 제거
+            else:
+                 st.warning("HTML 보고서 데이터를 생성하지 못했거나 유효하지 않습니다.")
+                 # st.write(f"--- DEBUG: HTML report (No Graphs) invalid ... ") # 디버깅 제거
+        except Exception as e:
+            st.error(f"HTML 다운로드 버튼 생성 중 오류: {e}")
+            # st.write(f"--- DEBUG: Error creating HTML button (No Graphs): {e} --- ") # 디버깅 제거
+        
+        # 다운로드 관련 추가 설명
+        st.info("📝 HTML 보고서는 그래프 없이 분석 결과와 해석만 포함됩니다. CSV 파일은 Excel 등에서 추가 분석하려는 경우에 유용합니다.") # 설명 수정
+
+    else: # if len(var_data) > 0: 의 else 블록
+        st.error(f"선택한 변수 '{selected_var}'에 유효한 데이터가 없습니다.")
 else:
     st.info("CSV 파일을 업로드해주세요. 왼쪽 사이드바에서 파일을 업로드할 수 있습니다.")
