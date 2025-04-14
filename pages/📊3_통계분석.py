@@ -173,19 +173,21 @@ if 'data' in st.session_state and st.session_state.data is not None:
         # 산점도 섹션 - Plotly로 변경
         st.subheader(f"{target_var}와(과) 주요 변수들의 산점도")
         
-        # 상관관계가 높은 상위 변수들에 대해 산점도 그리기
-        top_vars = corr_data.abs().sort_values(ascending=False).head(4).index.tolist()
+        # 상관관계가 높은 상위 변수들에 대해 산점도 그리기 (10개로 증가)
+        top_vars = corr_data.abs().sort_values(ascending=False).head(10).index.tolist()
         
-        # Plotly 서브플롯 생성 (2x2 그리드)
+        # Plotly 서브플롯 생성 (3x4 그리드로 변경, 마지막 두 칸은 빈칸)
         fig_scatter = make_subplots(
-            rows=2, cols=2,
-            subplot_titles=[f'{var} vs {target_var} (r={data[[var, target_var]].corr().iloc[0, 1]:.2f})' for var in top_vars]
+            rows=3, cols=4,
+            subplot_titles=[f'{var} vs {target_var} (r={data[[var, target_var]].corr().iloc[0, 1]:.2f})' for var in top_vars] + ['', ''],
+            vertical_spacing=0.12,
+            horizontal_spacing=0.05
         )
         
         # 각 변수에 대한 산점도 추가
         for i, var in enumerate(top_vars):
-            row = i // 2 + 1
-            col = i % 2 + 1
+            row = (i // 4) + 1
+            col = (i % 4) + 1
             
             # 상관계수 계산
             corr_val = data[[var, target_var]].corr().iloc[0, 1]
@@ -207,35 +209,48 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 row=row, col=col
             )
             
-            # 회귀선 추가를 위한 데이터 준비
-            x_range = np.linspace(data[var].min(), data[var].max(), 100)
-            slope, intercept, r_value, p_value, std_err = stats.linregress(data[var], data[target_var])
-            y_range = intercept + slope * x_range
-            
-            # 회귀선 추가
-            fig_scatter.add_trace(
-                go.Scatter(
-                    x=x_range,
-                    y=y_range,
-                    mode='lines',
-                    name=f'회귀선 (r={corr_val:.2f})',
-                    line=dict(color='red'),
-                    hoverinfo='skip'
-                ),
-                row=row, col=col
-            )
+            try:
+                # 회귀선 추가를 위한 데이터 준비
+                x_data = data[var].values
+                y_data = data[target_var].values
+                
+                # NaN 값 제거
+                mask = ~(np.isnan(x_data) | np.isnan(y_data))
+                x_data = x_data[mask]
+                y_data = y_data[mask]
+                
+                if len(x_data) > 1:  # 최소 2개 이상의 데이터 포인트가 필요
+                    # 회귀선 계산
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(x_data, y_data)
+                    x_range = np.linspace(np.min(x_data), np.max(x_data), 100)
+                    y_range = intercept + slope * x_range
+                    
+                    # 회귀선 추가
+                    fig_scatter.add_trace(
+                        go.Scatter(
+                            x=x_range,
+                            y=y_range,
+                            mode='lines',
+                            name=f'회귀선 (r={corr_val:.2f})',
+                            line=dict(color='red', width=2),
+                            hoverinfo='skip'
+                        ),
+                        row=row, col=col
+                    )
+            except Exception as e:
+                st.warning(f"'{var}' 변수의 회귀선 계산 중 오류 발생: {str(e)}")
         
         # 레이아웃 설정
         fig_scatter.update_layout(
-            height=700,
+            height=1000,  # 높이 증가
             showlegend=False,
             margin=dict(l=20, r=20, t=60, b=20)
         )
         
         # X축과 Y축 타이틀 설정
         for i, var in enumerate(top_vars):
-            row = i // 2 + 1
-            col = i % 2 + 1
+            row = (i // 4) + 1
+            col = (i % 4) + 1
             fig_scatter.update_xaxes(title_text=var, row=row, col=col)
             if col == 1:  # 왼쪽 열에만 Y축 레이블 표시
                 fig_scatter.update_yaxes(title_text=target_var, row=row, col=col)
@@ -244,8 +259,8 @@ if 'data' in st.session_state and st.session_state.data is not None:
         fig_scatter.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
         fig_scatter.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
         
-        # 중앙에 표시
-        display_plotly_centered(fig_scatter, width_pct=70)
+        # 중앙에 표시 (너비 증가)
+        display_plotly_centered(fig_scatter, width_pct=90)
         
         # 산점도 해석 추가
         with st.expander("📈 산점도 해석 방법"):

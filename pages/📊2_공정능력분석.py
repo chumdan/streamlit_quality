@@ -459,7 +459,12 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 
                 # 이상치 데이터 표시
                 if st.checkbox("이상치 데이터 보기"):
-                    st.dataframe(data[outliers][selected_var])
+                    # 이상치 데이터만 필터링하여 표시
+                    outlier_data = pd.DataFrame({
+                        selected_var: var_data_original[outliers],
+                        '원본 인덱스': var_data_original[outliers].index
+                    }).reset_index(drop=True)
+                    st.dataframe(outlier_data)
                     
                     if outlier_treatment == "제거":
                         st.caption("⚠️ 위 이상치들은 분석에서 제외됩니다.")
