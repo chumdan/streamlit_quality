@@ -63,12 +63,50 @@ def get_sample_data():
     
     return df
 
+# T-검정 샘플 데이터 생성 함수
+def get_ttest_sample_data():
+    np.random.seed(42)  # 재현성을 위한 시드 설정
+    ttest_data = {
+        '라인': ['A'] * 15 + ['B'] * 15, 
+        '수율': list(np.random.normal(95, 1.5, 15)) + list(np.random.normal(93, 1.2, 15))
+    }
+    df = pd.DataFrame(ttest_data)
+    df['수율'] = df['수율'].round(2)  # 소수점 자리 정리
+    return df
+
+# ANOVA 샘플 데이터 생성 함수
+def get_anova_sample_data():
+    np.random.seed(42)  # 재현성을 위한 시드 설정
+    anova_data = {
+        '공급업체': ['X'] * 10 + ['Y'] * 10 + ['Z'] * 10,
+        '강도': list(np.random.normal(100, 5, 10)) + list(np.random.normal(105, 4, 10)) + list(np.random.normal(102, 6, 10))
+    }
+    df = pd.DataFrame(anova_data)
+    df['강도'] = df['강도'].round(2)  # 소수점 자리 정리
+    return df
+
 # 샘플 데이터 다운로드 링크 생성 함수
 def get_sample_download_link():
     df = get_sample_data()
     csv = df.to_csv(index=False, encoding='cp949')
     b64 = base64.b64encode(csv.encode('cp949')).decode()
     href = f'<a href="data:file/csv;base64,{b64}" download="sample_data.csv">샘플 데이터 다운로드 (.csv)</a>'
+    return href
+
+# T-검정 샘플 데이터 다운로드 링크 생성 함수
+def get_ttest_sample_download_link():
+    df = get_ttest_sample_data()
+    csv = df.to_csv(index=False, encoding='cp949')
+    b64 = base64.b64encode(csv.encode('cp949')).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="ttest_sample_data.csv">T-검정 샘플 데이터 다운로드 (.csv)</a>'
+    return href
+
+# ANOVA 샘플 데이터 다운로드 링크 생성 함수
+def get_anova_sample_download_link():
+    df = get_anova_sample_data()
+    csv = df.to_csv(index=False, encoding='cp949')
+    b64 = base64.b64encode(csv.encode('cp949')).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="anova_sample_data.csv">ANOVA 샘플 데이터 다운로드 (.csv)</a>'
     return href
 
 # 데이터 업로드 주의사항 표시
@@ -93,6 +131,20 @@ with st.expander("📌 데이터 업로드 주의사항", expanded=True):
     st.markdown("### 샘플 데이터")
     st.dataframe(get_sample_data(), use_container_width=True)
     st.markdown(get_sample_download_link(), unsafe_allow_html=True)
+    
+    # T-검정 및 ANOVA 샘플 데이터 표시 및 다운로드 링크
+    st.markdown("### 통계분석용 샘플 데이터")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### T-검정 샘플 데이터")
+        st.dataframe(get_ttest_sample_data(), use_container_width=True)
+        st.markdown(get_ttest_sample_download_link(), unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("#### ANOVA 샘플 데이터")
+        st.dataframe(get_anova_sample_data(), use_container_width=True)
+        st.markdown(get_anova_sample_download_link(), unsafe_allow_html=True)
 
 # 파일 업로드 함수
 def upload_file():

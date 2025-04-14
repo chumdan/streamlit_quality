@@ -7,6 +7,7 @@ from scipy import stats
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+import io # io 모듈 추가
 
 # 한글 폰트 설정 (matplotlib용)
 plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -60,6 +61,28 @@ with st.expander("📚 통계분석이란?"):
     - **std**: 표준편차
     - **min/max**: 최소/최대값
     - **25%/50%/75%**: 1사분위수/중앙값/3사분위수
+    
+    ### 범주형 데이터 빈도 분석
+    범주형 데이터의 분포를 분석하는 방법입니다:
+    - **빈도(Frequency)**: 각 범주별 데이터 개수
+    - **비율(Percentage)**: 전체 데이터 중 각 범주가 차지하는 비율
+    - **시각화**: 막대 그래프를 통해 각 범주의 빈도를 직관적으로 비교
+    - **활용**: 제품 유형, 공급업체, 라인 등 범주형 변수의 분포 파악에 유용
+    
+    ### 집단 간 비교 분석
+    서로 다른 그룹 간의 차이를 통계적으로 검증하는 방법입니다:
+    
+    **1. 두 그룹 비교 (T-검정/Mann-Whitney U 검정)**
+    - **정규성 검증**: Shapiro-Wilk 검정으로 데이터의 정규성 확인
+    - **모수 검정(T-검정)**: 정규성을 만족하는 경우 사용
+    - **비모수 검정(Mann-Whitney U)**: 정규성을 만족하지 않는 경우 사용
+    - **해석**: p-value < 0.05인 경우 두 그룹 간 차이가 통계적으로 유의미함
+    
+    **2. 세 그룹 이상 비교 (ANOVA/Kruskal-Wallis H 검정)**
+    - **정규성 검증**: 각 그룹별 정규성 확인
+    - **모수 검정(ANOVA)**: 모든 그룹이 정규성을 만족하는 경우 사용
+    - **비모수 검정(Kruskal-Wallis H)**: 하나 이상의 그룹이 정규성을 만족하지 않는 경우 사용
+    - **해석**: p-value < 0.05인 경우 그룹 간 차이가 통계적으로 유의미함
     """)
 
 # 데이터 확인
@@ -346,5 +369,296 @@ if 'data' in st.session_state and st.session_state.data is not None:
             })
             
             st.table(formatted_stats)
+
+    # -----------------------------------------
+    # 새로운 섹션: 범주형 데이터 빈도 분석 추가
+    # -----------------------------------------
+    st.divider() # 섹션 구분을 위한 선 추가
+    st.subheader("📊 범주형 데이터 빈도 분석")
+
+    # 범주형 데이터 분석 설명 추가
+    with st.expander("🤔 범주형 데이터 빈도 분석이란?"):
+        st.markdown("""
+        범주형 데이터는 **문자열(텍스트)**이나 **정해진 카테고리**(예: '합격'/'불합격', 'A등급'/'B등급', '라인1'/'라인2')로 이루어진 데이터를 말합니다.
+        
+        **빈도 분석**은 선택한 컬럼(변수)에서 각각의 값(범주)들이 **몇 번씩 나타나는지(빈도수)**, 그리고 **전체 데이터에서 차지하는 비율**은 얼마인지 확인하는 분석입니다.
+        
+        **왜 필요한가요?**
+        - 데이터의 **구성 비율**을 파악할 수 있습니다. (예: 전체 제품 중 불량품 비율)
+        - 특정 항목의 **분포**를 확인할 수 있습니다. (예: 각 생산 라인별 생산량 분포)
+        - 데이터 처리나 모델링 전에 **데이터의 기본적인 특성**을 이해하는 데 도움이 됩니다.
+        
+        **어떻게 사용하나요?**
+        1. 아래 드롭다운 메뉴에서 분석하고 싶은 **범주형 컬럼**(텍스트 데이터 컬럼)을 선택하세요.
+        2. 선택된 컬럼의 각 값(범주)별 **빈도수**와 **비율**이 표로 나타납니다.
+        3. **막대 그래프**를 통해 각 범주의 빈도수를 시각적으로 비교할 수 있습니다.
+        """)
+
+    # 데이터에서 범주형 또는 문자열 타입 컬럼만 선택
+    categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
+
+    if not categorical_cols:
+        st.warning("데이터에 분석할 범주형 또는 문자열 컬럼이 없습니다.")
+    else:
+        # 범주형 변수 선택
+        selected_cat_var = st.selectbox(
+            "분석할 범주형 변수 선택:",
+            options=categorical_cols,
+            index=0 # 기본값으로 첫 번째 범주형 변수 선택
+        )
+        
+        if selected_cat_var:
+            st.write(f"### 🔹 '{selected_cat_var}' 변수 분석 결과")
+            
+            # 선택된 변수의 빈도수 및 비율 계산
+            value_counts = data[selected_cat_var].value_counts()
+            value_percentages = data[selected_cat_var].value_counts(normalize=True) * 100
+            
+            # 결과를 보기 좋게 DataFrame으로 만듦
+            freq_df = pd.DataFrame({
+                '빈도수': value_counts,
+                '비율 (%)': value_percentages
+            })
+            freq_df.index.name = '범주' # 인덱스 이름 설정
+            
+            # 결과 테이블 표시
+            st.dataframe(freq_df.style.format({'비율 (%)': '{:.2f}%'}))
+            
+            # Plotly 막대 그래프 생성
+            fig_bar = go.Figure()
+            
+            fig_bar.add_trace(
+                go.Bar(
+                    x=freq_df.index,
+                    y=freq_df['빈도수'],
+                    text=freq_df['빈도수'], # 막대 위에 빈도수 표시
+                    textposition='auto', # 텍스트 위치 자동 조정
+                    marker_color=px.colors.qualitative.Pastel, # 색상 설정
+                    hovertemplate='범주: %{x}<br>빈도수: %{y}<extra></extra>'
+                )
+            )
+            
+            # 그래프 레이아웃 설정
+            fig_bar.update_layout(
+                title=f"'{selected_cat_var}'의 빈도수 분포", # f-string 시작 따옴표 수정
+                xaxis_title='범주',
+                yaxis_title='빈도수',
+                height=400,
+                margin=dict(l=20, r=20, t=50, b=20),
+                xaxis_tickangle=-45 # x축 레이블 기울임 (겹침 방지)
+            )
+            
+            # 그리드 추가
+            fig_bar.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+            
+            # 중앙에 표시
+            display_plotly_centered(fig_bar, width_pct=70)
+
+    # -----------------------------------------
+    # 새로운 섹션: 집단 간 비교 분석 추가
+    # -----------------------------------------
+    st.divider()
+    st.subheader("📈 집단 간 비교 분석")
+
+    # --- 샘플 데이터 안내 메시지 추가 ---
+    st.info("""
+    **💡 분석 기능을 테스트해보고 싶으신가요?**
+    
+    데이터 업로드 페이지(📊1_데이터_업로드.py)에서 T-검정과 ANOVA 샘플 데이터를 다운로드할 수 있습니다.
+    
+    - **T-검정 샘플 데이터**: '라인'(A, B)과 '수율' 데이터가 포함된 CSV 파일입니다. 두 그룹 비교(T-검정)에 사용됩니다.
+    - **ANOVA 샘플 데이터**: '공급업체'(X, Y, Z)와 '강도' 데이터가 포함된 CSV 파일입니다. 세 그룹 이상 비교(ANOVA)에 사용됩니다.
+    """)
+    st.markdown("--- ") # 구분선 추가
+    # --- 샘플 데이터 안내 메시지 끝 ---
+
+    analysis_type = st.radio(
+        "어떤 비교를 하고 싶으신가요?",
+        [
+            "1️⃣ 특정 항목(숫자)을 **두 그룹** 간에 비교하기 (예: 라인 A vs 라인 B의 수율 비교)",
+            "2️⃣ 특정 항목(숫자)을 **세 그룹 이상** 간에 비교하기 (예: 공급업체 A/B/C 간 원자재 강도 비교)",
+        ],
+        index=None, # 선택하지 않은 상태로 시작
+        key="analysis_type_radio", # 고유 키 할당
+        help="""
+        - **두 그룹 비교**: 독립적인 두 집단의 평균 차이를 봅니다 (독립표본 T-검정).
+        - **세 그룹 이상 비교**: 독립적인 여러 집단의 평균 차이를 봅니다 (분산분석 ANOVA).
+        """
+    )
+    
+    # 숫자형 변수 목록 미리 준비
+    numeric_cols_compare = data.select_dtypes(include=np.number).columns.tolist()
+    # 범주형 변수 목록 (이전 섹션에서 가져옴)
+    categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
+
+    # --- 1. 두 그룹 비교 (독립표본 T-검정) --- 
+    if analysis_type and analysis_type.startswith("1️⃣"):
+        st.write("### 1. 두 그룹 비교 설정")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            numeric_var_ttest = st.selectbox("① 평균 비교 대상 변수 선택:", numeric_cols_compare, index=None, key="num_ttest")
+        
+        # 그룹 변수 선택 (고유값 2개인 범주형 변수만 필터링)
+        two_groups_cols = [col for col in categorical_cols if data[col].nunique() == 2]
+        
+        with col2:
+            group_var_ttest = st.selectbox("② 두 그룹 기준 변수 선택:", two_groups_cols, index=None, key="group_ttest", 
+                                        help="정확히 두 개의 그룹(값)으로 나누는 변수를 선택하세요.")
+            
+        if numeric_var_ttest and group_var_ttest:
+            st.write(f"### 🔹 '{numeric_var_ttest}'의 '{group_var_ttest}' 그룹 간 비교 결과")
+            
+            # 데이터 준비
+            group_values = data[group_var_ttest].unique()
+            group1_data = data[data[group_var_ttest] == group_values[0]][numeric_var_ttest].dropna()
+            group2_data = data[data[group_var_ttest] == group_values[1]][numeric_var_ttest].dropna()
+            
+            if len(group1_data) < 2 or len(group2_data) < 2:
+                st.warning("각 그룹에 최소 2개 이상의 데이터가 있어야 T-검정을 수행할 수 있습니다. (각 그룹별 데이터 개수를 확인해주세요)")
+            else:
+                # 정규성 검증 (Shapiro-Wilk 검정)
+                st.write("#### 1. 정규성 검증")
+                _, p_value1 = stats.shapiro(group1_data)
+                _, p_value2 = stats.shapiro(group2_data)
+                
+                # 정규성 검증 결과 표시
+                st.write(f"**그룹 '{group_values[0]}' 정규성 검증:** p-value = {p_value1:.4f}")
+                st.write(f"**그룹 '{group_values[1]}' 정규성 검증:** p-value = {p_value2:.4f}")
+                
+                # 정규성 판단 (p-value > 0.05이면 정규성 만족)
+                is_normal = p_value1 > 0.05 and p_value2 > 0.05
+                
+                if is_normal:
+                    st.success("✅ **정규성 검증 결과:** 두 그룹 모두 정규성을 만족합니다. (p > 0.05)")
+                    st.write("#### 2. 독립표본 T-검정 수행")
+                    
+                    # 독립표본 T-검정 수행
+                    t_stat, p_value = stats.ttest_ind(group1_data, group2_data, equal_var=False) # Welch's T-test (등분산 가정 안함)
+                    
+                    # 결과 해석
+                    st.write(f"**T-검정 결과:** T-statistic = {t_stat:.3f}, p-value = {p_value:.4f}")
+                    st.markdown("**결과 해석:**")
+                    if p_value < 0.05:
+                        st.success(f"✅ **결론:** 두 그룹('{group_values[0]}', '{group_values[1]}') 간 '{numeric_var_ttest}' 평균에는 **통계적으로 의미있는 차이가 있습니다** (p < 0.05). 그룹별 평균값을 확인해보세요!")
+                    else:
+                        st.info(f"ℹ️ **결론:** 두 그룹('{group_values[0]}', '{group_values[1]}') 간 '{numeric_var_ttest}' 평균 차이가 **통계적으로 의미있다고 보기는 어렵습니다** (p ≥ 0.05). 우연에 의한 차이일 수 있습니다.")
+                    st.caption("👉 p-value가 0.05보다 작으면 '차이가 있다'고 판단하는 것이 일반적입니다.")
+                else:
+                    st.warning("⚠️ **정규성 검증 결과:** 하나 이상의 그룹이 정규성을 만족하지 않습니다. (p ≤ 0.05)")
+                    st.write("#### 2. Mann-Whitney U 검정 수행 (비모수 검정)")
+                    
+                    # Mann-Whitney U 검정 수행
+                    _, p_value = stats.mannwhitneyu(group1_data, group2_data, alternative='two-sided')
+                    
+                    # 결과 해석
+                    st.write(f"**Mann-Whitney U 검정 결과:** p-value = {p_value:.4f}")
+                    st.markdown("**결과 해석:**")
+                    if p_value < 0.05:
+                        st.success(f"✅ **결론:** 두 그룹('{group_values[0]}', '{group_values[1]}') 간 '{numeric_var_ttest}' 분포에는 **통계적으로 의미있는 차이가 있습니다** (p < 0.05). 그룹별 중앙값을 확인해보세요!")
+                    else:
+                        st.info(f"ℹ️ **결론:** 두 그룹('{group_values[0]}', '{group_values[1]}') 간 '{numeric_var_ttest}' 분포 차이가 **통계적으로 의미있다고 보기는 어렵습니다** (p ≥ 0.05). 그룹 간 차이는 우연일 수 있습니다.")
+                    st.caption("👉 p-value가 0.05보다 작으면 '차이가 있다'고 판단하는 것이 일반적입니다.")
+                
+                # 그룹별 기술 통계량
+                st.write("**그룹별 기술 통계량:**")
+                stats_summary = data.groupby(group_var_ttest)[numeric_var_ttest].agg(['count', 'mean', 'std', 'min', 'max']).reset_index()
+                st.dataframe(stats_summary.style.format({'mean': '{:.2f}', 'std': '{:.2f}', 'min': '{:.2f}', 'max': '{:.2f}'}))
+                
+                # 그룹별 박스 플롯 (Plotly)
+                fig_box_ttest = px.box(data, x=group_var_ttest, y=numeric_var_ttest, 
+                                        color=group_var_ttest, # 그룹별 색상 구분
+                                        title=f"'{numeric_var_ttest}'의 그룹별 분포",
+                                        labels={numeric_var_ttest: f"{numeric_var_ttest} 값", group_var_ttest: "그룹"},
+                                        points="all") # 모든 점 표시
+                fig_box_ttest.update_layout(height=500)
+                display_plotly_centered(fig_box_ttest)
+
+    # --- 2. 세 그룹 이상 비교 (ANOVA) --- 
+    elif analysis_type and analysis_type.startswith("2️⃣"):
+        st.write("### 2. 세 그룹 이상 비교 설정")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            numeric_var_anova = st.selectbox("① 평균 비교 대상 변수 선택:", numeric_cols_compare, index=None, key="num_anova")
+            
+        # 그룹 변수 선택 (고유값 3개 이상인 범주형 변수만 필터링)
+        multi_groups_cols = [col for col in categorical_cols if data[col].nunique() >= 3]
+        
+        with col2:
+            group_var_anova = st.selectbox("② 세 그룹 이상 기준 변수 선택:", multi_groups_cols, index=None, key="group_anova",
+                                         help="세 개 이상의 그룹(값)으로 나누는 변수를 선택하세요.")
+            
+        if numeric_var_anova and group_var_anova:
+            st.write(f"### 🔹 '{numeric_var_anova}'의 '{group_var_anova}' 그룹 간 비교 결과 (ANOVA)")
+            
+            # 데이터 준비
+            groups = data[group_var_anova].unique()
+            group_data_list = [data[data[group_var_anova] == group][numeric_var_anova].dropna() for group in groups]
+            
+            # 각 그룹별 데이터 개수 확인
+            if any(len(group_data) < 2 for group_data in group_data_list):
+                 st.warning("각 그룹에 최소 2개 이상의 데이터가 있어야 ANOVA 검정을 수행할 수 있습니다. (각 그룹별 데이터 개수를 확인해주세요)")
+            else:
+                # 정규성 검증 (Shapiro-Wilk 검정)
+                st.write("#### 1. 정규성 검증")
+                
+                # 각 그룹별 정규성 검증 결과 저장
+                normality_results = []
+                for i, group_data in enumerate(group_data_list):
+                    _, p_value = stats.shapiro(group_data)
+                    normality_results.append((groups[i], p_value))
+                    st.write(f"**그룹 '{groups[i]}' 정규성 검증:** p-value = {p_value:.4f}")
+                
+                # 정규성 판단 (모든 그룹의 p-value > 0.05이면 정규성 만족)
+                is_normal = all(p_value > 0.05 for _, p_value in normality_results)
+                
+                if is_normal:
+                    st.success("✅ **정규성 검증 결과:** 모든 그룹이 정규성을 만족합니다. (p > 0.05)")
+                    st.write("#### 2. ANOVA 검정 수행")
+                    
+                    # ANOVA 검정 수행
+                    f_stat, p_value = stats.f_oneway(*group_data_list)
+                    
+                    # 결과 해석
+                    st.write(f"**ANOVA 검정 결과:** F-statistic = {f_stat:.3f}, p-value = {p_value:.4f}")
+                    st.markdown("**결과 해석:**")
+                    if p_value < 0.05:
+                        st.success(f"✅ **결론:** '{group_var_anova}' 그룹들 간 '{numeric_var_anova}' 평균에는 **적어도 하나 이상의 의미있는 차이가 존재합니다** (p < 0.05). 그룹별 평균값을 비교해보세요!" )
+                        st.info("ℹ️ ANOVA는 그룹들 간에 차이가 있다는 것만 알려줍니다. **어떤 그룹끼리** 차이가 나는지 정확히 알려면 추가 분석(사후분석)이 필요할 수 있습니다.")
+                    else:
+                        st.info(f"ℹ️ **결론:** '{group_var_anova}' 그룹들 간 '{numeric_var_anova}' 평균 차이가 **통계적으로 의미있다고 보기는 어렵습니다** (p ≥ 0.05). 그룹 간 차이는 우연일 수 있습니다.")
+                    st.caption("👉 p-value가 0.05보다 작으면 '그룹 간 차이가 있다'고 판단하는 것이 일반적입니다.")
+                else:
+                    st.warning("⚠️ **정규성 검증 결과:** 하나 이상의 그룹이 정규성을 만족하지 않습니다. (p ≤ 0.05)")
+                    st.write("#### 2. Kruskal-Wallis H 검정 수행 (비모수 검정)")
+                    
+                    # Kruskal-Wallis H 검정 수행
+                    h_stat, p_value = stats.kruskal(*group_data_list)
+                    
+                    # 결과 해석
+                    st.write(f"**Kruskal-Wallis H 검정 결과:** H-statistic = {h_stat:.3f}, p-value = {p_value:.4f}")
+                    st.markdown("**결과 해석:**")
+                    if p_value < 0.05:
+                        st.success(f"✅ **결론:** '{group_var_anova}' 그룹들 간 '{numeric_var_anova}' 분포에는 **적어도 하나 이상의 의미있는 차이가 존재합니다** (p < 0.05). 그룹별 중앙값을 비교해보세요!" )
+                        st.info("ℹ️ Kruskal-Wallis H 검정은 그룹들 간에 차이가 있다는 것만 알려줍니다. **어떤 그룹끼리** 차이가 나는지 정확히 알려면 추가 분석(사후분석)이 필요할 수 있습니다.")
+                    else:
+                        st.info(f"ℹ️ **결론:** '{group_var_anova}' 그룹들 간 '{numeric_var_anova}' 분포 차이가 **통계적으로 의미있다고 보기는 어렵습니다** (p ≥ 0.05). 그룹 간 차이는 우연일 수 있습니다.")
+                    st.caption("👉 p-value가 0.05보다 작으면 '그룹 간 차이가 있다'고 판단하는 것이 일반적입니다.")
+
+                # 그룹별 기술 통계량
+                st.write("**그룹별 기술 통계량:**")
+                stats_summary_anova = data.groupby(group_var_anova)[numeric_var_anova].agg(['count', 'mean', 'std', 'min', 'max']).reset_index()
+                st.dataframe(stats_summary_anova.style.format({'mean': '{:.2f}', 'std': '{:.2f}', 'min': '{:.2f}', 'max': '{:.2f}'}))
+                
+                # 그룹별 박스 플롯 (Plotly)
+                fig_box_anova = px.box(data, x=group_var_anova, y=numeric_var_anova, 
+                                       color=group_var_anova, # 그룹별 색상 구분
+                                       title=f"'{numeric_var_anova}'의 그룹별 분포",
+                                       labels={numeric_var_anova: f"{numeric_var_anova} 값", group_var_anova: "그룹"},
+                                       points="all") # 모든 점 표시
+                fig_box_anova.update_layout(height=500)
+                display_plotly_centered(fig_box_anova)
+
 else:
     st.info("CSV 파일을 업로드해주세요. 왼쪽 사이드바에서 파일을 업로드할 수 있습니다.")

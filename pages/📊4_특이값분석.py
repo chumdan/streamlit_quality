@@ -266,6 +266,16 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 # 배치의 값
                 batch_value = data_analysis.loc[selected_batch, var]
                 
+                # Z-score 계산
+                z_score = batch_zscores[var]
+                
+                # 특이값 여부 확인
+                is_outlier = abs(z_score) > z_threshold
+                
+                # 박스 플롯 색상 설정
+                box_color = 'red' if is_outlier else 'black'
+                box_fillcolor = 'rgba(255,0,0,0.1)' if is_outlier else 'rgba(255,255,255,0)'
+                
                 # 스트립 플롯 추가
                 fig.add_trace(
                     go.Box(
@@ -275,8 +285,8 @@ if 'data' in st.session_state and st.session_state.data is not None:
                         jitter=0.3,
                         pointpos=-1.8,
                         marker=dict(color='gray', size=5, opacity=0.6),
-                        line=dict(color='black'),
-                        fillcolor='rgba(255,255,255,0)'
+                        line=dict(color=box_color, width=2 if is_outlier else 1),
+                        fillcolor=box_fillcolor
                     ),
                     row=row, col=col
                 )
@@ -295,21 +305,24 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 )
                 
                 # Z-score 텍스트 추가
-                z_score = batch_zscores[var]
+                z_score_text = f"Z-score: {z_score:.2f}"
+                z_score_color = 'red' if is_outlier else 'black'
+                z_score_bgcolor = 'rgba(255,0,0,0.1)' if is_outlier else 'white'
+                
                 fig.add_annotation(
                     x=batch_value,
                     y=0.15,
-                    text=f"Z-score: {z_score:.2f}",
+                    text=z_score_text,
                     showarrow=False,
-                    font=dict(size=12, color='black'),
-                    bgcolor='white',
-                    bordercolor='black',
+                    font=dict(size=12, color=z_score_color),
+                    bgcolor=z_score_bgcolor,
+                    bordercolor=box_color,
                     borderwidth=1,
                     row=row, col=col
                 )
                 
-                # 특이값 표시선 추가 (옵션)
-                if abs(z_score) > z_threshold:
+                # 특이값 표시선 추가
+                if is_outlier:
                     fig.add_shape(
                         type="line",
                         x0=var_values.min(),
@@ -324,7 +337,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             fig.update_layout(
                 height=350 * n_rows,      # 높이 약간 증가
                 width=1200,               # 너비 더 넓게 설정
-                title=f"배치 '{selected_batch}'의 변수별 분포 분석 (빨간점: 현재 배치 값)",
+                title=f"배치 '{selected_batch}'의 변수별 분포 분석 (빨간점: 현재 배치 값, 빨간색 테두리: 특이값)",
                 showlegend=False,
                 margin=dict(l=20, r=20, t=100, b=30)  # 여백 줄이기
             )
@@ -336,8 +349,13 @@ if 'data' in st.session_state and st.session_state.data is not None:
             )
             
             # 서브플롯 제목 스타일 설정
-            for i in fig['layout']['annotations']:
-                i['font'] = dict(size=12)  # 제목 폰트 크기 작게 조정
+            for i, var in enumerate(selected_vars):
+                z_score = batch_zscores[var]
+                is_outlier = abs(z_score) > z_threshold
+                title_color = 'red' if is_outlier else 'black'
+                
+                fig['layout']['annotations'][i]['font'] = dict(size=12, color=title_color)
+                fig['layout']['annotations'][i]['text'] = f"{var} (Z: {z_score:.2f})"
             
             # 그래프 출력
             st.plotly_chart(fig)
