@@ -14,6 +14,8 @@ import plotly.graph_objects as go
 import io
 import sys
 import traceback
+from scipy import stats
+import itertools
 
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -241,10 +243,94 @@ if data is not None:
         with tab1:
             st.write("### 모델 훈련")
             
+            # 회귀분석과 머신러닝의 차이점 설명
+            with st.expander("💡 회귀분석과 머신러닝의 차이점 이해하기", expanded=True):
+                st.markdown("""
+                ### 회귀분석과 머신러닝의 차이점
+                
+                #### 1. 기본 개념
+                - **회귀분석**: 변수 간의 관계를 수학적 방정식으로 표현하는 통계적 방법
+                - **머신러닝**: 데이터로부터 패턴을 학습하여 예측하는 방법
+                
+                #### 2. 주요 차이점
+                
+                **📊 예측 방식**
+                - **회귀분석**: 
+                  - 선형 관계만 고려 (y = ax + b 형태)
+                  - 변수 간 관계가 명확하고 해석 가능
+                  - 이상치에 민감
+                
+                - **머신러닝**: 
+                  - 비선형 관계도 학습 가능
+                  - 복잡한 패턴 발견 가능
+                  - 이상치에 더 강건함
+                
+                **🔍 해석성**
+                - **회귀분석**: 
+                  - 결과가 매우 명확하고 해석하기 쉬움
+                  - 각 변수의 영향력을 정확히 파악 가능
+                  - 통계적 유의성 검정 가능
+                
+                - **머신러닝**: 
+                  - 결과 해석이 상대적으로 어려움
+                  - '블랙박스'처럼 작동할 수 있음
+                  - 변수 중요도는 파악 가능하나 정확한 영향력은 알기 어려움
+                
+                **🎯 적합한 상황**
+                - **회귀분석이 좋은 경우**: 
+                  - 변수 간 관계가 선형적일 때
+                  - 결과의 해석이 중요할 때
+                  - 데이터가 적을 때
+                  - 통계적 검정이 필요할 때
+                
+                - **머신러닝이 좋은 경우**: 
+                  - 복잡한 비선형 관계가 있을 때
+                  - 예측 정확도가 가장 중요할 때
+                  - 데이터가 많을 때
+                  - 실시간 예측이 필요할 때
+                
+                #### 3. 실제 적용 시 고려사항
+                - **데이터의 특성**: 
+                  - 데이터가 적으면 회귀분석이 더 안정적
+                  - 데이터가 많으면 머신러닝이 더 정확할 수 있음
+                
+                - **목적에 따른 선택**: 
+                  - 해석이 중요하면 → 회귀분석
+                  - 예측 정확도가 중요하면 → 머신러닝
+                
+                - **실제 사례**: 
+                  - 품질 관리에서는 두 방법을 모두 사용
+                  - 초기 분석에는 회귀분석으로 관계 파악
+                  - 실제 예측에는 머신러닝 활용
+                """)
+            
             # 모델 선택
+            st.write("### 모델 선택")
+            
+            # 모델 설명 추가
+            with st.expander("💡 각 모델의 특징", expanded=True):
+                st.markdown("""
+                ### 모델 종류와 특징
+                
+                #### 1. RandomForest (랜덤 포레스트)
+                - 여러 개의 의사결정 나무를 결합한 앙상블 모델
+                - 안정적이고 과적합에 강함
+                - 복잡한 관계도 잘 학습
+                
+                #### 2. XGBoost (엑스지부스트)
+                - 가장 성능이 좋은 부스팅 알고리즘 중 하나
+                - 높은 예측 정확도
+                - 계산 속도가 빠름
+                
+                #### 3. 선형 회귀
+                - 가장 기본적인 통계 모델
+                - 결과 해석이 쉽고 직관적
+                - 단순한 선형 관계에 적합
+                """)
+            
             model_type = st.radio(
                 "모델 선택:",
-                ["RandomForest", "XGBoost"],
+                ["RandomForest", "XGBoost", "선형 회귀"],
                 horizontal=True
             )
             
@@ -406,8 +492,11 @@ if data is not None:
                     # 모델 훈련
                     if model_type == "RandomForest":
                         model = RandomForestRegressor(n_estimators=100, random_state=42)
-                    else:  # XGBoost
+                    elif model_type == "XGBoost":
                         model = xgb.XGBRegressor(n_estimators=100, random_state=42)
+                    else:  # 선형 회귀
+                        from sklearn.linear_model import LinearRegression
+                        model = LinearRegression()
                     
                     model.fit(X_train, y_train)
                     
@@ -422,11 +511,272 @@ if data is not None:
                     st.write(f"**평균 제곱근 오차(RMSE):** {rmse:.4f}")
                     st.write(f"**R² 점수:** {r2:.4f}")
                     
+                    # 회귀 분석 결과 (선형 회귀 모델인 경우)
+                    if model_type == "선형 회귀":
+                        st.markdown("### 회귀 분석 결과")
+                        
+                        # 회귀 분석 해석 가이드를 먼저 표시
+                        with st.expander("💡 회귀 분석 결과 쉽게 이해하기", expanded=True):
+                            st.markdown("""
+                            ### 회귀 분석 결과 쉽게 이해하기
+                            
+                            #### 1. 회귀 분석 결과 표 해석
+                            - **회귀 계수**: 변수가 1 증가할 때 예측값이 얼마나 변하는지 나타내요
+                              - **양수**: 이 변수가 1 증가하면 → 예측값도 증가해요
+                              - **음수**: 이 변수가 1 증가하면 → 예측값은 감소해요
+                              - **크기**: 숫자가 클수록 → 영향력이 커요
+                            
+                            - **표준 오차**: 회귀 계수의 불확실성을 나타내요
+                              - **작을수록**: 계수가 더 정확하다는 의미예요
+                              - **클수록**: 계수가 불확실하다는 의미예요
+                            
+                            - **t 통계량**: 회귀 계수가 0과 다른지 검정하는 값이에요
+                              - **절대값이 클수록**: 변수가 더 중요하다는 의미예요
+                              - **일반적으로 2 이상**: 변수가 중요하다고 볼 수 있어요
+                            
+                            - **p-value**: 변수가 통계적으로 의미 있는지 나타내요
+                              - **0.05보다 작으면**: 이 변수가 정말 중요한 거예요! (통계적으로 의미 있어요)
+                              - **0.05보다 크면**: 이 변수는 크게 중요하지 않아요
+                            
+                            #### 2. R² 점수는?
+                            - **1에 가까울수록**: 모델이 정말 잘 예측하는 거예요
+                            - **0에 가까울수록**: 모델이 잘 예측하지 못하는 거예요
+                            - **일반적으로 0.7 이상**: 좋은 모델이라고 볼 수 있어요
+                            
+                            #### 3. 회귀 방정식 활용법
+                            - 방정식을 보면 각 변수가 얼마나 영향을 주는지 알 수 있어요
+                            - 예: 변수 A가 10이고 변수 B가 5일 때 예측값은?
+                              1. 방정식에 숫자를 넣어서 계산하면 돼요
+                              2. 양수 계수면 더하고, 음수 계수면 빼요
+                            
+                           
+                            """)
+                        
+                        # 회귀 계수 및 p-value 계산
+                        # 회귀 계수
+                        coefficients = model.coef_
+                        
+                        # p-value 계산
+                        n = len(X_train)
+                        p = len(X_train.columns)
+                        dof = n - p - 1
+                        
+                        # MSE 계산
+                        mse = np.sum((y_train - model.predict(X_train)) ** 2) / dof
+                        
+                        # X의 공분산 행렬의 역행렬
+                        X_with_intercept = np.column_stack([np.ones(n), X_train])
+                        var_b = mse * np.linalg.inv(np.dot(X_with_intercept.T, X_with_intercept)).diagonal()
+                        
+                        # 표준 오차
+                        sd_b = np.sqrt(var_b)
+                        
+                        # t 통계량
+                        t_stat = coefficients / sd_b[1:]
+                        
+                        # p-value
+                        p_values = 2 * (1 - stats.t.cdf(np.abs(t_stat), dof))
+                        
+                        # 결과를 데이터프레임으로 변환
+                        regression_results = pd.DataFrame({
+                            '변수': X_train.columns,
+                            '회귀 계수': coefficients,
+                            '표준 오차': sd_b[1:],
+                            't 통계량': t_stat,
+                            'p-value': p_values
+                        })
+                        
+                        # p-value 기준으로 정렬
+                        regression_results = regression_results.sort_values('p-value')
+                        
+                        # 결과 표시
+                        st.dataframe(
+                            regression_results.style.format({
+                                '회귀 계수': '{:.4f}',
+                                '표준 오차': '{:.4f}',
+                                't 통계량': '{:.4f}',
+                                'p-value': '{:.4f}'
+                            }).background_gradient(cmap='RdYlBu_r', subset=['p-value']),
+                            use_container_width=True
+                        )
+                        
+                        # 회귀 방정식 표시
+                        st.markdown("#### 회귀 방정식:")
+                        equation = f"{target_col} = {model.intercept_:.4f}"
+                        for i, coef in enumerate(coefficients):
+                            if coef >= 0:
+                                equation += f" + {coef:.4f} × {X_train.columns[i]}"
+                            else:
+                                equation += f" - {abs(coef):.4f} × {X_train.columns[i]}"
+                        st.markdown(f"**{equation}**")
+                        
+                        # 회귀 모델 가정 검정
+                        st.markdown("#### 회귀 모델 가정 검정")
+                        
+                        # 회귀 모델 가정 검정 설명
+                        with st.expander("💡 회귀 모델 가정 검정 이해하기", expanded=True):
+                            st.markdown("""
+                            ### 회귀 모델 가정 검정 이해하기
+                            
+                            회귀 분석은 세 가지 주요 가정을 만족해야 신뢰할 수 있는 결과를 얻을 수 있습니다:
+                            
+                            1. **정규성(Normality)**
+                               - 잔차(예측값과 실제값의 차이)가 정규분포를 따라야 합니다
+                               - 이는 통계적 추론의 유효성을 보장합니다
+                            
+                            2. **선형성(Linearity)**
+                               - 예측변수와 반응변수 간의 관계가 선형적이어야 합니다
+                               - 잔차가 예측값에 대해 무작위로 분포해야 합니다
+                            
+                            3. **등분산성(Homoscedasticity)**
+                               - 잔차의 분산이 모든 예측값에서 동일해야 합니다
+                               - 이는 모델의 예측이 모든 범위에서 동일한 정확도를 가져야 함을 의미합니다
+                            
+                            아래 그래프들을 통해 이러한 가정들이 만족되는지 확인할 수 있습니다.
+                            """)
+                        
+                        # 1. 정규성 검정 (잔차의 정규성)
+                        residuals = y_train - model.predict(X_train)
+                        _, p_value = stats.normaltest(residuals)
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            # 정규성 검정 결과
+                            st.markdown("**1. 잔차의 정규성 검정**")
+                            if p_value < 0.05:
+                                st.warning(f"잔차가 정규분포를 따르지 않습니다 (p-value: {p_value:.4f})")
+                            else:
+                                st.success(f"잔차가 정규분포를 따릅니다 (p-value: {p_value:.4f})")
+                            
+                            # 정규성 검정 설명
+                            st.markdown("""
+                            #### 정규성 검정 그래프 해석
+                            - 이 그래프는 잔차의 분포를 보여줍니다
+                            - 이상적인 경우: 종 모양(bell-shaped)의 대칭적인 분포
+                            - 빨간색 점선: 정규분포 곡선
+                            - 해석:
+                              - 분포가 대칭적이고 종 모양이면 → 정규성 가정 만족
+                              - 분포가 비대칭이거나 꼬리가 두꺼우면 → 정규성 가정 위반
+                            """)
+                            
+                            # 잔차 히스토그램
+                            fig_residuals = go.Figure()
+                            fig_residuals.add_trace(
+                                go.Histogram(
+                                    x=residuals,
+                                    nbinsx=30,
+                                    name='잔차',
+                                    marker_color='#3498db'
+                                )
+                            )
+                            
+                            # 정규분포 곡선 추가
+                            x_range = np.linspace(min(residuals), max(residuals), 100)
+                            y_range = stats.norm.pdf(x_range, np.mean(residuals), np.std(residuals))
+                            fig_residuals.add_trace(
+                                go.Scatter(
+                                    x=x_range,
+                                    y=y_range,
+                                    mode='lines',
+                                    name='정규분포',
+                                    line=dict(color='red', dash='dash')
+                                )
+                            )
+                            
+                            fig_residuals.update_layout(
+                                title='잔차 분포',
+                                xaxis_title='잔차',
+                                yaxis_title='빈도',
+                                height=300
+                            )
+                            st.plotly_chart(fig_residuals, use_container_width=True)
+                        
+                        with col2:
+                            # 2. 선형성 검정 (잔차 vs 예측값)
+                            st.markdown("**2. 선형성 검정**")
+                            
+                            # 선형성 검정 설명
+                            st.markdown("""
+                            #### 선형성 검정 그래프 해석
+                            - 이 그래프는 예측값과 잔차의 관계를 보여줍니다
+                            - 이상적인 경우: 점들이 무작위로 분포하고 패턴이 없어야 함
+                            - 빨간색 점선: 0선 (잔차가 0인 기준선)
+                            - 해석:
+                              - 점들이 무작위로 분포하면 → 선형성 가정 만족
+                              - 점들이 패턴을 보이면 → 선형성 가정 위반
+                              - 곡선형 패턴이 보이면 → 비선형 관계 존재
+                            """)
+                            
+                            # 잔차 vs 예측값 산점도
+                            fig_linearity = go.Figure()
+                            fig_linearity.add_trace(
+                                go.Scatter(
+                                    x=model.predict(X_train),
+                                    y=residuals,
+                                    mode='markers',
+                                    marker=dict(color='#3498db', size=8, opacity=0.6),
+                                    name='잔차 vs 예측값'
+                                )
+                            )
+                            
+                            # 0선 추가
+                            fig_linearity.add_shape(
+                                type="line",
+                                x0=min(model.predict(X_train)),
+                                y0=0,
+                                x1=max(model.predict(X_train)),
+                                y1=0,
+                                line=dict(color="red", width=1, dash="dash")
+                            )
+                            
+                            fig_linearity.update_layout(
+                                title='잔차 vs 예측값',
+                                xaxis_title='예측값',
+                                yaxis_title='잔차',
+                                height=300
+                            )
+                            st.plotly_chart(fig_linearity, use_container_width=True)
+                        
+                        # 3. 등분산성 검정
+                        st.markdown("**3. 등분산성 검정**")
+                        
+                        # 등분산성 검정 설명
+                        st.markdown("""
+                        #### 등분산성 검정 그래프 해석
+                        - 이 그래프는 예측값과 잔차의 절대값 관계를 보여줍니다
+                        - 이상적인 경우: 점들이 무작위로 분포하고 패턴이 없어야 함
+                        - 해석:
+                          - 점들이 무작위로 분포하면 → 등분산성 가정 만족
+                          - 점들이 깔때기 모양이나 다른 패턴을 보이면 → 등분산성 가정 위반
+                          - 잔차의 크기가 예측값에 따라 변면 → 이분산성(heteroscedasticity) 문제
+                        """)
+                        
+                        # 잔차의 절대값 vs 예측값
+                        fig_homoscedasticity = go.Figure()
+                        fig_homoscedasticity.add_trace(
+                            go.Scatter(
+                                x=model.predict(X_train),
+                                y=np.abs(residuals),
+                                mode='markers',
+                                marker=dict(color='#3498db', size=8, opacity=0.6),
+                                name='|잔차| vs 예측값'
+                            )
+                        )
+                        
+                        fig_homoscedasticity.update_layout(
+                            title='|잔차| vs 예측값 (등분산성 검정)',
+                            xaxis_title='예측값',
+                            yaxis_title='|잔차|',
+                            height=300
+                        )
+                        st.plotly_chart(fig_homoscedasticity, use_container_width=True)
+                    
                     # 모델 및 특성 저장
                     st.session_state.model = model
                     st.session_state.model_features = top_indices.tolist()
                     st.session_state.remove_outliers = remove_outliers
                     st.session_state.apply_scaling = apply_scaling
+                    st.session_state.model_type = model_type
                     
                     if remove_outliers:
                         if outlier_method == "Z-점수":
@@ -507,107 +857,252 @@ if data is not None:
                     display_plotly_centered(fig_compare)
                     
                     # 변수 중요도 시각화
-                    if model_type == "RandomForest":
-                        # 랜덤 포레스트 변수 중요도
+                    if model_type in ["RandomForest", "XGBoost"]:
+                        # 랜덤 포레스트와 XGBoost의 변수 중요도
                         feature_importance = model.feature_importances_
-                    elif model_type == "XGBoost":
-                        # XGBoost 변수 중요도
-                        feature_importance = model.feature_importances_
-                    
-                    # 변수 중요도를 데이터프레임으로 변환
-                    feature_importance_df = pd.DataFrame({
-                        'Feature': X_train.columns,
-                        'Importance': feature_importance
-                    })
+                        
+                        # 변수 중요도를 데이터프레임으로 변환
+                        feature_importance_df = pd.DataFrame({
+                            'Feature': X_train.columns,
+                            'Importance': feature_importance
+                        })
 
-                    # 중요도 기준 내림차순 정렬
-                    feature_importance_df = feature_importance_df.sort_values('Importance', ascending=False)
+                        # 중요도 기준 내림차순 정렬
+                        feature_importance_df = feature_importance_df.sort_values('Importance', ascending=False)
 
-                    # Plotly 그래프 생성
-                    fig_importance = go.Figure()
+                        # Plotly 그래프 생성
+                        fig_importance = go.Figure()
 
-                    # 바 차트 추가 (남색으로 변경)
-                    fig_importance.add_trace(
-                        go.Bar(
-                            y=feature_importance_df['Feature'],
-                            x=feature_importance_df['Importance'],
-                            orientation='h',
-                            marker_color='#3498db',  # 남색으로 변경
-                            text=[f'{val:.4f}' for val in feature_importance_df['Importance']],
-                            textposition='outside',
-                            hovertemplate='%{y}: %{x:.4f}<extra></extra>'
+                        # 바 차트 추가 (남색으로 변경)
+                        fig_importance.add_trace(
+                            go.Bar(
+                                y=feature_importance_df['Feature'],
+                                x=feature_importance_df['Importance'],
+                                orientation='h',
+                                marker_color='#3498db',  # 남색으로 변경
+                                text=[f'{val:.4f}' for val in feature_importance_df['Importance']],
+                                textposition='outside',
+                                hovertemplate='%{y}: %{x:.4f}<extra></extra>'
+                            )
                         )
-                    )
 
-                    # 레이아웃 설정
-                    fig_importance.update_layout(
-                        title='모델의 전반적인 변수 중요도',
-                        xaxis_title='중요도',
-                        yaxis_title='변수',
-                        height=500,
-                        margin=dict(l=20, r=20, t=40, b=20),
-                        xaxis=dict(
-                            range=[0, max(feature_importance_df['Importance']) * 1.1],  # 0부터 시작하도록 수정
-                            showgrid=True,
-                            gridwidth=1,
-                            gridcolor='LightGrey'
-                        ),
-                        yaxis=dict(
-                            autorange='reversed'  # 중요도가 높은 순으로 정렬
+                        # 레이아웃 설정
+                        fig_importance.update_layout(
+                            title='모델의 전반적인 변수 중요도',
+                            xaxis_title='중요도',
+                            yaxis_title='변수',
+                            height=500,
+                            margin=dict(l=20, r=20, t=40, b=20),
+                            xaxis=dict(
+                                range=[0, max(feature_importance_df['Importance']) * 1.1],  # 0부터 시작하도록 수정
+                                showgrid=True,
+                                gridwidth=1,
+                                gridcolor='LightGrey'
+                            ),
+                            yaxis=dict(
+                                autorange='reversed'  # 중요도가 높은 순으로 정렬
+                            )
                         )
-                    )
 
-                    # 그래프 표시
-                    st.subheader("모델의 전반적인 변수 중요도")
-                    display_plotly_centered(fig_importance)
+                        # 그래프 표시
+                        st.subheader("모델의 전반적인 변수 중요도")
+                        display_plotly_centered(fig_importance)
                     
-                    st.success("모델 훈련 완료! 이제 '시뮬레이션' 탭으로 이동하여 예측을 수행할 수 있습니다.")
+                    # 모델 훈련 완료 메시지와 시뮬레이션 버튼
+                    st.success("모델 훈련이 완료되었습니다!")
         
         with tab2:
             st.write("### 시뮬레이션")
             
             if 'model' in st.session_state and 'model_features' in st.session_state:
-                st.write("아래 변수들의 값을 조정하여 예측해보세요:")
+                # 시뮬레이션 모드 선택
+                simulation_mode = st.radio(
+                    "시뮬레이션 모드:",
+                    ["수동 시뮬레이션", "최적화 시뮬레이션"],
+                    horizontal=True
+                )
                 
-                # 입력 위젯 생성
-                input_values = {}
-                for feature in st.session_state.model_features:
-                    min_val = float(numeric_data[feature].min())
-                    max_val = float(numeric_data[feature].max())
-                    mean_val = float(numeric_data[feature].mean())
-                    std_val = float(numeric_data[feature].std())
+                if simulation_mode == "수동 시뮬레이션":
+                    st.write("아래 변수들의 값을 조정하여 예측해보세요:")
                     
-                    # 슬라이더 생성
-                    input_values[feature] = st.slider(
-                        f"{feature} (평균: {mean_val:.2f}, 표준편차: {std_val:.2f})",
-                        min_val,
-                        max_val,
-                        mean_val,
-                        step=(max_val-min_val)/100
-                    )
+                    # 입력 위젯 생성
+                    input_values = {}
+                    for feature in st.session_state.model_features:
+                        min_val = float(numeric_data[feature].min())
+                        max_val = float(numeric_data[feature].max())
+                        mean_val = float(numeric_data[feature].mean())
+                        std_val = float(numeric_data[feature].std())
+                        
+                        # 슬라이더 생성
+                        input_values[feature] = st.slider(
+                            f"{feature} (평균: {mean_val:.2f}, 표준편차: {std_val:.2f})",
+                            min_val,
+                            max_val,
+                            mean_val,
+                            step=(max_val-min_val)/100
+                        )
+                    
+                    # 예측 수행 버튼
+                    if st.button("예측 수행"):
+                        with st.spinner("예측 중..."):
+                            # 입력값으로 데이터프레임 생성
+                            input_df = pd.DataFrame([input_values])
+                            
+                            # 스케일링 적용 (필요한 경우)
+                            if 'apply_scaling' in st.session_state and st.session_state.apply_scaling:
+                                input_scaled = st.session_state.scaler.transform(input_df)
+                                input_scaled_df = pd.DataFrame(input_scaled, columns=input_df.columns)
+                                prediction = st.session_state.model.predict(input_scaled_df)[0]
+                            else:
+                                prediction = st.session_state.model.predict(input_df)[0]
+                            
+                            # 예측 결과를 세션 상태에 저장 (지속성 유지)
+                            st.session_state.last_prediction = prediction
+                            st.session_state.last_input_values = input_values.copy()
+                            
+                            # 타겟 통계 정보 저장
+                            st.session_state.target_mean = numeric_data[target_col].mean()
+                            st.session_state.target_min = numeric_data[target_col].min()
+                            st.session_state.target_max = numeric_data[target_col].max()
                 
-                # 예측 수행 버튼
-                if st.button("예측 수행"):
-                    with st.spinner("예측 중..."):
-                        # 입력값으로 데이터프레임 생성
-                        input_df = pd.DataFrame([input_values])
+                else:  # 최적화 시뮬레이션
+                    st.write("### 최적화 시뮬레이션")
+                    st.write("목표값을 설정하고 최적의 변수 조합을 찾아보세요.")
+                    
+                    # 목표값 설정
+                    target_value = st.number_input(
+                        f"목표 {target_col} 값:",
+                        min_value=float(numeric_data[target_col].min()),
+                        max_value=float(numeric_data[target_col].max()),
+                        value=float(numeric_data[target_col].mean()),
+                        step=0.1
+                    )
+                    
+                    # 최적화 방법 선택
+                    optimization_method = st.radio(
+                        "최적화 방법:",
+                        ["랜덤 서치"],
+                        horizontal=True
+                    )
+                    
+                    # 랜덤 서치 설명 추가
+                    with st.expander("💡 랜덤 서치(Random Search)란?", expanded=True):
+                        st.markdown("""
+                        ### 랜덤 서치(Random Search) 이해하기
                         
-                        # 스케일링 적용 (필요한 경우)
-                        if 'apply_scaling' in st.session_state and st.session_state.apply_scaling:
-                            input_scaled = st.session_state.scaler.transform(input_df)
-                            input_scaled_df = pd.DataFrame(input_scaled, columns=input_df.columns)
-                            prediction = st.session_state.model.predict(input_scaled_df)[0]
-                        else:
-                            prediction = st.session_state.model.predict(input_df)[0]
+                        랜덤 서치는 최적화 문제를 해결하기 위한 효율적인 방법입니다:
                         
-                        # 예측 결과를 세션 상태에 저장 (지속성 유지)
-                        st.session_state.last_prediction = prediction
-                        st.session_state.last_input_values = input_values.copy()
+                        #### 1. 기본 개념
+                        - **랜덤 서치**: 변수의 가능한 값 범위 내에서 무작위로 값을 선택하여 최적의 조합을 찾는 방법
+                        - **장점**: 
+                          - 그리드 서치보다 훨씬 빠른 속도
+                          - 더 넓은 탐색 범위 커버
+                          - 지역 최적해에 덜 민감
                         
-                        # 타겟 통계 정보 저장
-                        st.session_state.target_mean = numeric_data[target_col].mean()
-                        st.session_state.target_min = numeric_data[target_col].min()
-                        st.session_state.target_max = numeric_data[target_col].max()
+                        #### 2. 작동 방식
+                        1. 각 변수에 대해 설정된 범위 내에서 무작위로 값을 선택
+                        2. 선택된 값들로 예측을 수행
+                        3. 목표값과 가장 가까운 결과를 찾을 때까지 반복
+                        
+                        #### 3. 그리드 서치와의 차이점
+                        - **그리드 서치**: 모든 가능한 조합을 체계적으로 시도 (느림)
+                        - **랜덤 서치**: 무작위로 선택된 조합만 시도 (빠름)
+                        
+                        #### 4. 활용 시 고려사항
+                        - 시도 횟수를 늘리면 더 좋은 결과를 얻을 수 있음
+                        - 변수의 범위를 적절히 설정하는 것이 중요
+                        - 목표값에 도달하지 못할 경우 범위 조정 필요
+                        """)
+                    
+                    # 최적화 범위 설정
+                    st.write("#### 변수 범위 설정")
+                    variable_ranges = {}
+                    
+                    for feature in st.session_state.model_features:
+                        min_val = float(numeric_data[feature].min())
+                        max_val = float(numeric_data[feature].max())
+                        mean_val = float(numeric_data[feature].mean())
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            variable_ranges[feature] = {
+                                'min': st.number_input(
+                                    f"{feature} 최소값:",
+                                    min_value=min_val,
+                                    max_value=mean_val,
+                                    value=min_val,
+                                    step=(mean_val-min_val)/20
+                                )
+                            }
+                        with col2:
+                            variable_ranges[feature]['max'] = st.number_input(
+                                f"{feature} 최대값:",
+                                min_value=mean_val,
+                                max_value=max_val,
+                                value=max_val,
+                                step=(max_val-mean_val)/20
+                            )
+                    
+                    # 최적화 버튼
+                    if st.button("최적화 수행"):
+                        with st.spinner("최적화 중..."):
+                            # 최적화 수행
+                            best_input_values = {}
+                            best_prediction = None
+                            min_diff = float('inf')
+                            
+                            # 랜덤 서치 파라미터
+                            n_iterations = 1000  # 시도할 조합의 수
+                            
+                            # 진행 상황 표시
+                            progress_bar = st.progress(0)
+                            status_text = st.empty()
+                            
+                            # 랜덤 서치 수행
+                            for i in range(n_iterations):
+                                # 진행 상황 업데이트
+                                progress = (i + 1) / n_iterations
+                                progress_bar.progress(progress)
+                                status_text.text(f"진행 중: {i+1}/{n_iterations} 조합 시도 중...")
+                                
+                                # 랜덤 입력값 생성
+                                current_input = {}
+                                for feature in st.session_state.model_features:
+                                    min_val = variable_ranges[feature]['min']
+                                    max_val = variable_ranges[feature]['max']
+                                    current_input[feature] = np.random.uniform(min_val, max_val)
+                                
+                                input_df = pd.DataFrame([current_input])
+                                
+                                # 스케일링 적용 (필요한 경우)
+                                if 'apply_scaling' in st.session_state and st.session_state.apply_scaling:
+                                    input_scaled = st.session_state.scaler.transform(input_df)
+                                    input_scaled_df = pd.DataFrame(input_scaled, columns=input_df.columns)
+                                    prediction = st.session_state.model.predict(input_scaled_df)[0]
+                                else:
+                                    prediction = st.session_state.model.predict(input_df)[0]
+                                
+                                # 목표값과의 차이 계산
+                                diff = abs(prediction - target_value)
+                                
+                                # 최적 조합 업데이트
+                                if diff < min_diff:
+                                    min_diff = diff
+                                    best_prediction = prediction
+                                    best_input_values = current_input.copy()
+                            
+                            # 진행 상황 업데이트 완료
+                            progress_bar.progress(1.0)
+                            status_text.text("최적화 완료!")
+                            
+                            # 최적화 결과 저장
+                            st.session_state.last_prediction = best_prediction
+                            st.session_state.last_input_values = best_input_values
+                            
+                            # 타겟 통계 정보 저장
+                            st.session_state.target_mean = numeric_data[target_col].mean()
+                            st.session_state.target_min = numeric_data[target_col].min()
+                            st.session_state.target_max = numeric_data[target_col].max()
                 
                 # 예측 결과가 있으면 항상 표시 (변수별 기여도 분석과 무관하게 유지)
                 if 'last_prediction' in st.session_state:
@@ -625,237 +1120,18 @@ if data is not None:
                                 f"{((prediction - target_mean) / target_mean * 100):.2f}%")
                     col2.metric("최소값", f"{target_min:.4f}")
                     col3.metric("최대값", f"{target_max:.4f}")
-                
-                # 변수별 기여도 분석 (SHAP 대신 대체 방법 사용)
-                if st.checkbox("변수별 기여도 분석 보기", key="feature_impact_checkbox"):
-                    with st.spinner("변수 기여도 분석 중..."):
-                        try:
-                            # 모델 확인
-                            if 'model' not in st.session_state:
-                                st.error("훈련된 모델이 없습니다. 먼저 '모델 훈련' 탭에서 모델을 훈련해주세요.")
-                            else:
-                                # 1. 모델 기본 특성 중요도 표시 (가능한 경우)
-                                if hasattr(st.session_state.model, 'feature_importances_'):
-                                    st.subheader("모델의 전반적인 변수 중요도")
-                                    
-                                    importances = st.session_state.model.feature_importances_
-                                    # 내림차순 정렬하여 상위 10개 선택
-                                    indices = np.argsort(importances)[::-1][:10]  # 상위 10개
-                                    
-                                    feature_importance_df = pd.DataFrame({
-                                        '변수': [st.session_state.model_features[i] for i in indices],
-                                        '중요도': [importances[i] for i in indices]
-                                    })
-                                    
-                                    # 이미지처럼 수평 막대 그래프 표시 (Plotly 사용)
-                                    fig_impact = go.Figure()
-
-                                    # 모든 막대를 남색으로 설정
-                                    fig_impact.add_trace(
-                                        go.Bar(
-                                            y=feature_importance_df['변수'],
-                                            x=feature_importance_df['중요도'],
-                                            orientation='h',
-                                            marker_color='#3498db',  # 모두 남색으로 통일
-                                            text=[f'{val:.4f}' for val in feature_importance_df['중요도']],
-                                            textposition='outside',
-                                            hovertemplate='%{y}: %{x:.4f}<extra></extra>'
-                                        )
-                                    )
-
-                                    # 레이아웃 설정
-                                    max_impact = max(importances) if len(importances) > 0 else 0
-                                    fig_impact.update_layout(
-                                        title=f"모델의 전반적인 변수 중요도",
-                                        xaxis_title="중요도",
-                                        yaxis=dict(
-                                            title="변수",
-                                            autorange="reversed"  # 위에서부터 내림차순 정렬
-                                        ),
-                                        height=500,
-                                        margin=dict(l=20, r=20, t=40, b=20),
-                                        xaxis=dict(
-                                            range=[0, max_impact*1.1],  # 0부터 시작하도록 수정
-                                            showgrid=True,
-                                            gridwidth=1,
-                                            gridcolor='LightGrey'
-                                        )
-                                    )
-
-                                    # 중앙에 표시
-                                    display_plotly_centered(fig_impact)
-                                
-                                # 마지막 예측이 있는 경우에만 변수별 영향도 분석
-                                if 'last_prediction' in st.session_state and 'last_input_values' in st.session_state:
-                                    # 현재 예측에 대한 변수별 영향도 분석
-                                    st.subheader(f"{target_col} 예측에 대한 변수별 영향")
-                                    
-                                    # 저장된 입력값 사용
-                                    input_values = st.session_state.last_input_values
-                                    input_df = pd.DataFrame([input_values])
-                                    base_prediction = st.session_state.last_prediction
-                                    
-                                    # 각 변수의 영향도를 개별적으로 테스트
-                                    impact_results = []
-                                    
-                                    # 각 특성에 대해 반복
-                                    for feature in st.session_state.model_features:
-                                        # 각 특성의 중요도를 측정하기 위해 개별 테스트
-                                        feature_min = numeric_data[feature].min()
-                                        feature_max = numeric_data[feature].max()
-                                        feature_mean = numeric_data[feature].mean()
-                                        feature_range = feature_max - feature_min
-                                        
-                                        # 현재 특성의 값
-                                        current_value = input_values[feature]
-                                        
-                                        # 테스트 케이스 생성 (최소, 평균, 최대값)
-                                        test_values = {
-                                            '최소값': feature_min,
-                                            '평균값': feature_mean,
-                                            '최대값': feature_max
-                                        }
-                                        
-                                        # 다양한 값으로 테스트
-                                        predictions = {}
-                                        for label, value in test_values.items():
-                                            # 이미 현재 값과 같으면 건너뛰기
-                                            if value == current_value:
-                                                predictions[label] = base_prediction
-                                                continue
-                                                
-                                            # 특성 값 변경
-                                            modified_input = input_df.copy()
-                                            modified_input[feature] = value
-                                            
-                                            # 변경된 입력으로 예측
-                                            if 'apply_scaling' in st.session_state and st.session_state.apply_scaling:
-                                                modified_input_scaled = st.session_state.scaler.transform(modified_input)
-                                                modified_input_scaled_df = pd.DataFrame(modified_input_scaled, columns=modified_input.columns)
-                                                modified_prediction = st.session_state.model.predict(modified_input_scaled_df)[0]
-                                            else:
-                                                modified_prediction = st.session_state.model.predict(modified_input)[0]
-                                            
-                                            predictions[label] = modified_prediction
-                                        
-                                        # 변수의 영향도 계산 (최대-최소 차이)
-                                        if len(predictions) > 1:
-                                            impact = predictions['최대값'] - predictions['최소값']
-                                            # 현재 값이 평균보다 높은지 낮은지에 따라 부호 결정
-                                            if current_value > feature_mean:
-                                                direction = 1  # 평균보다 높음
-                                            else:
-                                                direction = -1  # 평균보다 낮음
-                                                
-                                            # 전체 범위 대비 현재 값의 상대적 위치에 따라 영향도 가중치 부여
-                                            relative_position = (current_value - feature_mean) / (feature_range/2) if feature_range > 0 else 0
-                                            # 영향도는 변수 범위에서의 변화량 * 현재 값의 상대적 위치로 계산
-                                            weighted_impact = impact * relative_position
-                                        else:
-                                            weighted_impact = 0  # 영향도 측정 불가능한 경우
-                                        
-                                        # 결과 저장
-                                        impact_results.append({
-                                            '변수': feature,
-                                            '현재값': current_value,
-                                            '최소예측': predictions.get('최소값', base_prediction),
-                                            '최대예측': predictions.get('최대값', base_prediction),
-                                            '영향도': weighted_impact
-                                        })
-                                    
-                                    # 결과를 데이터프레임으로 변환
-                                    impact_df = pd.DataFrame(impact_results)
-                                    
-                                    # 영향도의 절대값 기준으로 정렬
-                                    impact_df = impact_df.sort_values(by='영향도', key=abs, ascending=False)
-                                    
-                                    # 상위 10개 변수만 표시
-                                    impact_df = impact_df.head(10)
-                                    
-                                    # 중복되는 표 제거 (상세 데이터 expander로 충분함)
-                                    
-                                    # 이미지처럼 수평 막대 그래프 표시 (Plotly 사용)
-                                    fig_impact = go.Figure()
-
-                                    # 영향도에 따라 색상 설정
-                                    colors = ['#3498db' if x > 0 else '#e74c3c' for x in impact_df['영향도'].values]
-
-                                    # 수평 막대 추가
-                                    fig_impact.add_trace(
-                                        go.Bar(
-                                            y=impact_df['변수'],
-                                            x=impact_df['영향도'],
-                                            orientation='h',
-                                            marker_color=colors,
-                                            text=[f'{val:.4f}' for val in impact_df['영향도']],
-                                            textposition='outside',
-                                            hovertemplate='%{y}: %{x:.4f}<extra></extra>'
-                                        )
-                                    )
-
-                                    # 레이아웃 설정
-                                    max_impact = max(abs(np.max(impact_df['영향도'].values)), abs(np.min(impact_df['영향도'].values))) if len(impact_df['영향도'].values) > 0 else 0
-                                    fig_impact.update_layout(
-                                        title=f"{target_col} 예측에 대한 변수별 영향도",
-                                        xaxis_title="예측값에 대한 영향도",
-                                        yaxis=dict(
-                                            title="변수",
-                                            autorange="reversed"  # 위에서부터 내림차순 정렬
-                                        ),
-                                        height=500,
-                                        margin=dict(l=20, r=20, t=40, b=20),
-                                        xaxis=dict(
-                                            range=[-max_impact*1.1, max_impact*1.1] if max_impact > 0 else None,
-                                            zeroline=True,
-                                            zerolinecolor='gray',
-                                            zerolinewidth=1,
-                                            showgrid=True,
-                                            gridwidth=1,
-                                            gridcolor='LightGrey'
-                                        )
-                                    )
-
-                                    # 중앙에 표시
-                                    display_plotly_centered(fig_impact)
-                                    
-                                    # 상세 데이터 표시
-                                    with st.expander("변수별 영향도 상세 데이터"):
-                                        st.dataframe(impact_df)
-                                    
-                                    # 결과 해석 가이드
-                                    with st.expander("💡 변수 영향도 해석 방법"):
-                                        st.markdown("""
-                                        ### 변수 영향도 해석 방법
-                                        
-                                        이 분석은 각 변수가 현재 예측에 얼마나 영향을 미치는지 보여주는 직관적인 지표입니다.
-                                        
-                                        #### 쉽게 이해하기
-                                        - **빨간색 막대(양수)**: 이 변수는 지금 예측값을 **높이고 있어요**
-                                        - **파란색 막대(음수)**: 이 변수는 지금 예측값을 **낮추고 있어요**
-                                        - **막대가 길수록**: 변수의 영향력이 크다는 의미입니다
-                                        
-                                        #### 실제 활용법
-                                        - 빨간색(양수) 막대가 큰 변수를 **낮추면** → 예측값이 감소합니다
-                                        - 파란색(음수) 막대가 큰 변수를 **낮추면** → 예측값이 증가합니다
-                                        - 특정 목표치를 원한다면, 막대가 큰 변수부터 조정하세요
-                                        
-                                        #### 영향도가 0인 변수는 왜 그럴까요?
-                                        영향도가 0으로 나타나는 변수는 다음과 같은 이유가 있습니다:
-                                        
-                                        1. **현재 상태에서 영향이 미미함**: 다른 변수들이 더 지배적인 영향을 미치고 있습니다
-                                        2. **변수의 범위가 좁음**: 최소값과 최대값 사이의 차이가 작아서 변화해도 예측에 큰 영향이 없습니다
-                                        3. **모델의 특성**: 모델이 이 변수에 대해 학습한 영향력이 작거나, 다른 변수와의 상호작용에서만 중요합니다
-                                        4. **비선형 관계**: 현재 값을 중심으로는 영향이 적지만, 다른 구간에서는 영향이 클 수 있습니다
-                                        
-                                        > 💡 **중요**: 영향도가 0이라도 반드시 중요하지 않은 것은 아닙니다! 다른 상황이나 다른 변수값과 조합될 때 중요해질 수 있습니다.
-                                        """)
-                                else:
-                                    st.info("예측을 먼저 수행해주세요.")
-                                
-                        except Exception as e:
-                            import traceback
-                            st.error(f"변수 기여도 분석 중 오류가 발생했습니다: {e}")
-                            st.code(traceback.format_exc(), language="python")
+                    
+                    # 최적화 모드인 경우 목표값과의 차이 표시
+                    if simulation_mode == "최적화 시뮬레이션":
+                        st.metric("목표값과의 차이", f"{abs(prediction - target_value):.4f}")
+                    
+                    # 최적 변수 값 표시
+                    st.write("#### 최적 변수 값:")
+                    optimal_values_df = pd.DataFrame({
+                        '변수': list(st.session_state.last_input_values.keys()),
+                        '값': list(st.session_state.last_input_values.values())
+                    })
+                    st.dataframe(optimal_values_df, use_container_width=True)
             else:
                 st.info("먼저 모델을 훈련해주세요.")
     else:
