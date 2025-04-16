@@ -3,13 +3,37 @@ import pandas as pd
 import plotly.graph_objects as go
 from PIL import Image
 import base64
+import os
 
-# 한글 폰트 설정
+# 한글 폰트 설정 (가장 먼저 호출)
 st.set_page_config(
     page_title="품질예측시스템 소개",
     page_icon="✅",
     layout="wide"
 )
+
+# 방문자 수 카운터 (오른쪽 상단 표시)
+count_file = 'visitor_count.txt'
+if 'visitor_counted' not in st.session_state:
+    if not os.path.exists(count_file):
+        with open(count_file, 'w') as f:
+            f.write('0')
+    with open(count_file, 'r+') as f:
+        count = int(f.read().strip()) + 1
+        f.seek(0)
+        f.write(str(count))
+        f.truncate()
+    st.session_state['visitor_counted'] = True
+else:
+    if not os.path.exists(count_file):
+        count = 1
+    else:
+        with open(count_file, 'r') as f:
+            count = int(f.read().strip())
+st.markdown(f"""
+<div style='position:fixed; top:50px; right:40px; z-index:99999; background:#F0F2F6; padding:10px 22px; border-radius:22px; font-size:18px; box-shadow:0 4px 16px #0002;'>
+    👥 방문자 수: <b>{count}</b>
+</div>""", unsafe_allow_html=True)
 
 # 제목 및 서브 제목
 st.title("품질예측시스템 소개")
@@ -191,4 +215,4 @@ st.warning("""
 """)
 
 st.markdown("**문의 및 피드백:**")
-st.error("문제점 및 개선요청사항은 정보기획팀 고동현 주임(내선: 189)에게 피드백 주시면 지속적인 개선에 반영하겠습니다.")
+st.error("문제점 및 개선요청사항이 있다면, 정보기획팀 고동현 주임(내선: 189)에게 피드백 부탁드립니다. 지속적인 개선에 반영하겠습니다. ")

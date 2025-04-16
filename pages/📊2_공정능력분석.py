@@ -169,7 +169,7 @@ def create_html_report():
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>{selected_var} 공정능력분석 보고서 (그래프 제외)</title>
+            <title>{selected_var} 공정능력분석 보고서</title>
             <style>
                 /* ... (스타일 정의, 그래프 관련 스타일 제거) ... */
                 body {{ font-family: 'Malgun Gothic', Arial, sans-serif; margin: 20px; }}
@@ -328,15 +328,42 @@ with st.expander("📚 공정능력분석이란?"):
     
     공정능력분석은 생산 공정이 고객 요구사항이나 제품 규격을 충족시킬 수 있는 능력을 통계적으로 평가하는 방법입니다.
     
+    ### 관리한계선과 시그마(σ) 레벨
+    
+    관리도에서 시그마(σ) 레벨은 공정의 변동성을 모니터링하는 기준이 됩니다.
+    """)
+    
+    # 이미지 별도 표시
+    st.image("./image/normal distribution sigma levels.png", 
+            caption="시그마(σ) 레벨과 데이터 포함 범위",
+            width=600)
+    
+    st.markdown("""
+    - **±1σ**: 데이터의 68.27% 포함 (너무 민감)
+    - **±2σ**: 데이터의 95.45% 포함 (다소 민감)
+    - **±3σ**: 데이터의 99.73% 포함 (적절한 균형)
+    
+    ±3σ를 기본 관리한계선으로 사용하는 이유:
+    1. 통계적 의미: 정규분포에서 데이터의 99.73%를 포함
+    2. 실용성: 자연적 변동과 특수원인을 효과적으로 구분
+    3. 산업 표준: 월터 슈하트가 제안한 이후 글로벌 표준으로 정착
+    4. 균형: 불필요한 경보(false alarm)와 문제 감지 사이의 최적 지점
+
     ### 주요 지표 (정규분포 가정 시)
     
     - **Cp (공정능력지수)**: 공정의 산포와 규격 폭의 비율
       - Cp = (USL - LSL) / (6σ)
-      - Cp ≥ 1.33: 우수, 1.00 ≤ Cp < 1.33: 적절, Cp < 1.00: 부적합
+      - **해석 기준**:
+        - Cp ≥ 1.33: 우수 (공정이 매우 안정적)
+        - 1.00 ≤ Cp < 1.33: 적절 (공정이 관리 가능한 수준)
+        - Cp < 1.00: 부적합 (공정 개선 필요)
     
     - **Cpk (공정능력지수K)**: 공정의 산포와 중심이탈을 함께 고려
       - Cpk = min[(USL - μ) / (3σ), (μ - LSL) / (3σ)]
-      - Cpk ≥ 1.33: 우수, 1.00 ≤ Cpk < 1.33: 적절, Cpk < 1.00: 부적합
+      - **해석 기준**:
+        - Cpk ≥ 1.33: 우수 (공정이 규격 중심에 잘 맞춰져 있음)
+        - 1.00 ≤ Cpk < 1.33: 적절 (공정이 규격을 만족하나 개선 여지 있음)
+        - Cpk < 1.00: 부적합 (공정이 규격을 벗어날 위험이 높음)
     
     - **Cpu (상한 공정능력지수)**: 상한규격에 대한 공정능력
       - Cpu = (USL - μ) / (3σ)
@@ -349,10 +376,18 @@ with st.expander("📚 공정능력분석이란?"):
     - **Pp (백분위수 기반 공정능력지수)**: 
       - Pp = (USL - LSL) / (P99.865 - P0.135)
       - 여기서 P99.865와 P0.135는 각각 99.865% 및 0.135% 백분위수
+      - **해석 기준**:
+        - Pp ≥ 1.33: 우수 (공정이 매우 안정적)
+        - 1.00 ≤ Pp < 1.33: 적절 (공정이 관리 가능한 수준)
+        - Pp < 1.00: 부적합 (공정 개선 필요)
     
     - **Ppk (백분위수 기반 공정능력지수K)**: 
       - Ppk = min[(USL - P50) / (P99.865 - P50), (P50 - LSL) / (P50 - P0.135)]
       - 여기서 P50은 중앙값(50% 백분위수)
+      - **해석 기준**:
+        - Ppk ≥ 1.33: 우수 (공정이 규격 중심에 잘 맞춰져 있음)
+        - 1.00 ≤ Ppk < 1.33: 적절 (공정이 규격을 만족하나 개선 여지 있음)
+        - Ppk < 1.00: 부적합 (공정이 규격을 벗어날 위험이 높음)
     """)
 
 # 데이터 확인
@@ -775,7 +810,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             # Plotly 그래프 표시
             display_plotly_centered(fig_qq)
 
-            # QQ-Plot 해석
+            # QQ Plot 해석
             if normality_result == "정규 분포 (p >= 0.05)":
                 r_squared = r**2
                 if r_squared > 0.95:
@@ -788,6 +823,29 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     st.warning(f"⚠️ QQ Plot 해석: 데이터가 정규분포를 따르지 않습니다. (R² = {r_squared:.4f})")
                 else:
                     st.warning(f"⚠️ QQ Plot 해석: 데이터가 정규분포와 약간 차이가 있습니다. (R² = {r_squared:.4f})")
+            st.info("""
+            💡 **R² 값이란?**
+            - R²(결정계수)는 QQ Plot에서 점들이 직선에 얼마나 잘 맞는지를 나타내는 지표입니다
+            - 0부터 1 사이의 값을 가지며, 1에 가까울수록 정규분포에 가깝습니다
+            - 일반적으로 R² > 0.95면 매우 좋음, R² > 0.90이면 양호한 수준으로 판단합니다
+            """)
+
+            st.info("""
+            💡 **R² 값과 정규성 검정 결과가 다른 이유**
+            1. **검정 방법의 차이**:
+               - 정규성 검정: 엄격한 통계적 검정으로, 작은 차이도 민감하게 감지
+               - QQ Plot의 R²: 시각적/실용적 관점에서 전반적인 정규성 정도를 평가
+            
+            2. **해석의 차이**:
+               - 정규성검정 p < 0.05: 통계적으로 정규분포가 아님을 의미
+               - R² > 0.90: 실용적 관점에서 정규분포에 근사함을 의미
+            
+            3. **활용**:
+               - 엄격한 통계적 가정이 필요한 경우: 정규성 검정 결과 사용
+               - 실무적 판단이 필요한 경우: R² 값도 함께 고려
+            """)
+
+
 
             # 합격률 및 공정능력 지수 표시
             st.subheader("합격률 및 공정능력 지수")
@@ -812,10 +870,12 @@ if 'data' in st.session_state and st.session_state.data is not None:
                             delta="양호" if defect_rate_ppm <= 2700 else 
                                  "주의" if defect_rate_ppm <= 50000 else 
                                  "개선필요",
-                            delta_color="inverse")
+                            delta_color="inverse",
+                            help="PPM(Parts Per Million): 백만 개당 불량품의 개수")
                     st.caption("백만 개당 불량 개수")
                 else:
-                    st.metric("불량률", "N/A")
+                    st.metric("불량률", "N/A",
+                            help="PPM(Parts Per Million): 백만 개당 불량품의 개수")
                     st.caption("계산 불가")
 
             with metrics_row1_col3:
@@ -1325,3 +1385,11 @@ if 'data' in st.session_state and st.session_state.data is not None:
         st.error(f"선택한 변수 '{selected_var}'에 유효한 데이터가 없습니다.")
 else:
     st.info("CSV 파일을 업로드해주세요. 왼쪽 사이드바에서 파일을 업로드할 수 있습니다.")
+
+
+# 페이지 하단 소개
+st.markdown("---")
+
+
+st.markdown("**문의 및 피드백:**")
+st.error("문제점 및 개선요청사항이 있다면, 정보기획팀 고동현 주임(내선: 189)에게 피드백 부탁드립니다. 지속적인 개선에 반영하겠습니다. ")

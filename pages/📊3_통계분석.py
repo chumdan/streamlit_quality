@@ -351,9 +351,11 @@ if 'data' in st.session_state and st.session_state.data is not None:
             with st.expander("📦 박스플롯 해석 방법"):
                 st.markdown("""
                 ### 박스플롯 구성 요소
+                """)
                 
-                ![박스플롯 설명](https://miro.medium.com/max/1400/1*2c21SkzJMf3frPXPAR_gZA.png)
+                st.image("./image/BOX_PLOT.png", caption="박스플롯의 주요 구성 요소")
                 
+                st.markdown("""
                 1. **박스(Box)**: 1사분위수(Q1, 25%)에서 3사분위수(Q3, 75%)까지의 범위를 나타냅니다.
                    - 이 범위는 데이터의 중간 50%를 포함합니다.
                 
@@ -403,10 +405,6 @@ if 'data' in st.session_state and st.session_state.data is not None:
         - 특정 항목의 **분포**를 확인할 수 있습니다. (예: 각 생산 라인별 생산량 분포)
         - 데이터 처리나 모델링 전에 **데이터의 기본적인 특성**을 이해하는 데 도움이 됩니다.
         
-        **어떻게 사용하나요?**
-        1. 아래 드롭다운 메뉴에서 분석하고 싶은 **범주형 컬럼**(텍스트 데이터 컬럼)을 선택하세요.
-        2. 선택된 컬럼의 각 값(범주)별 **빈도수**와 **비율**이 표로 나타납니다.
-        3. **막대 그래프**를 통해 각 범주의 빈도수를 시각적으로 비교할 수 있습니다.
         """)
 
     # 데이터에서 범주형 또는 문자열 타입 컬럼만 선택
@@ -677,3 +675,8 @@ if 'data' in st.session_state and st.session_state.data is not None:
 
 else:
     st.info("CSV 파일을 업로드해주세요. 왼쪽 사이드바에서 파일을 업로드할 수 있습니다.")
+
+# 페이지 하단 소개
+st.markdown("---")
+st.markdown("**문의 및 피드백:**")
+st.error("문제점 및 개선요청사항이 있다면, 정보기획팀 고동현 주임(내선: 189)에게 피드백 부탁드립니다. 지속적인 개선에 반영하겠습니다. ")
