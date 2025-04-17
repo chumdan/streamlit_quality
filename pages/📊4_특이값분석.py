@@ -41,31 +41,32 @@ with st.expander("📚 특이값(이상치) 분석이란?"):
     | -3 ~ -2 또는 +2 ~ +3 | 평균에서 상당히 벗어남 (전체 데이터의 약 4.5%) | 주의 필요 |
     | < -3 또는 > +3 | 평균에서 크게 벗어남 (전체 데이터의 약 0.3%) | 특이값 |
     
-    ### 배치 기반 특이값 분석의 활용
-    
-    - **품질 문제 추적**: 불량 제품이 발생한 배치에서 어떤 공정 변수가 특이했는지 파악
-    - **공정 개선**: 자주 특이값을 보이는 변수를 중심으로 공정 안정화 방안 모색
-    - **근본 원인 분석**: 여러 변수가 동시에 특이값을 보일 경우 공통 원인 파악
     """)
 
 # 데이터 확인
 if 'data' in st.session_state and st.session_state.data is not None:
     data = st.session_state.data
     
-    # 배치 설정 부분 수정
+    # 배치 설정
     st.subheader("배치 설정")
 
     # 모든 컬럼 목록 가져오기
     all_columns = data.columns.tolist()
-
-    # 배치 ID 컬럼이 있는지 확인
+    
+    # 잠재적인 배치 ID 컬럼 찾기 (batch, id, lot, 번호 등을 포함하는 컬럼)
     potential_batch_cols = [col for col in all_columns if 'batch' in col.lower() or 'id' in col.lower() or 'lot' in col.lower() or '번호' in col]
 
-    # 배치 식별 방법 선택 (라디오 버튼으로 변경)
+    # 고유한 값을 가진 컬럼 찾기 (각 행마다 다른 값을 가진 컬럼)
+    unique_value_cols = [col for col in all_columns if data[col].nunique() == len(data)]
+
+    # 배치 ID로 사용 가능한 컬럼 (고유한 값을 가진 컬럼)
+    valid_batch_cols = list(set(potential_batch_cols + unique_value_cols))
+
+    # 배치 식별 방법 선택
     batch_id_method = st.radio(
         "배치 식별 방법:",
         ["데이터 인덱스를 배치 ID로 사용", "특정 컬럼을 배치 ID로 사용"],
-        index=0 if len(potential_batch_cols) == 0 else 1,
+        index=0 if len(valid_batch_cols) == 0 else 1,
         help="배치를 어떻게 식별할지 선택하세요."
     )
 
@@ -74,16 +75,20 @@ if 'data' in st.session_state and st.session_state.data is not None:
     # 배치 ID로 특정 컬럼을 사용할 경우에만 컬럼 선택 표시
     batch_col = None
     if not use_index_as_batch:
-        batch_col = st.selectbox(
-            "배치 ID 컬럼 선택:",
-            options=all_columns,
-            index=all_columns.index(potential_batch_cols[0]) if len(potential_batch_cols) > 0 else 0,
-            help="각 행을 식별하는 고유 ID 컬럼을 선택하세요 (예: 배치번호, LOT_ID 등)"
-        )
+        if not valid_batch_cols:
+            st.warning("배치 ID로 사용할 수 있는 고유한 값을 가진 컬럼이 없습니다. 데이터 인덱스를 사용하세요.")
+            use_index_as_batch = True
+        else:
+            batch_col = st.selectbox(
+                "배치 ID 컬럼 선택:",
+                options=valid_batch_cols,
+                index=valid_batch_cols.index(potential_batch_cols[0]) if potential_batch_cols and potential_batch_cols[0] in valid_batch_cols else 0,
+                help="각 행을 식별하는 고유 ID 컬럼을 선택하세요 (예: 배치번호, LOT_ID 등). 고유한 값을 가진 컬럼만 표시됩니다."
+            )
 
     # 배치 이름에 추가 정보 사용 여부
     use_name_column = st.checkbox("배치 이름 표시에 사용할 추가 컬럼 선택", 
-                                  help="배치 ID 외에 제품명, 생산일자 등 배치를 더 쉽게 식별할 수 있는 컬럼을 선택합니다.")
+                                help="배치 ID 외에 제품명, 생산일자 등 배치를 더 쉽게 식별할 수 있는 컬럼을 선택합니다.")
 
     # 추가 정보 컬럼 선택
     name_column = None
@@ -98,13 +103,18 @@ if 'data' in st.session_state and st.session_state.data is not None:
     if not use_index_as_batch:
         data_analysis = data.copy()
         
+        # 배치 ID 컬럼의 모든 값을 문자열로 변환
+        data_analysis[batch_col] = data_analysis[batch_col].astype(str)
+        
         # 배치 표시 이름 생성 (ID + 이름)
         if name_column and name_column in data.columns:
-            data_analysis['배치_표시명'] = data_analysis[batch_col].astype(str) + " (" + data_analysis[name_column].astype(str) + ")"
+            # 이름 컬럼도 문자열로 변환
+            data_analysis['배치_표시명'] = data_analysis[batch_col] + " (" + data_analysis[name_column].astype(str) + ")"
             batch_display_dict = dict(zip(data_analysis[batch_col], data_analysis['배치_표시명']))
         else:
             batch_display_dict = dict(zip(data_analysis[batch_col], data_analysis[batch_col]))
         
+        # 인덱스 설정 전에 문자열로 변환된 값 사용
         data_analysis.set_index(batch_col, inplace=True)
         batch_ids = data_analysis.index.tolist()
         
@@ -113,14 +123,30 @@ if 'data' in st.session_state and st.session_state.data is not None:
     else:
         st.info("현재 데이터 인덱스를 배치 ID로 사용합니다.")
         data_analysis = data.copy()
+        # 인덱스를 문자열로 변환
+        data_analysis.index = data_analysis.index.astype(str)
         batch_ids = data_analysis.index.tolist()
         
         # 배치 표시 이름 생성 (인덱스 + 이름)
         if name_column and name_column in data.columns:
-            data_analysis['배치_표시명'] = data_analysis.index.astype(str) + " (" + data_analysis[name_column].astype(str) + ")"
+            data_analysis['배치_표시명'] = data_analysis.index + " (" + data_analysis[name_column].astype(str) + ")"
             batch_display_dict = dict(zip(data_analysis.index, data_analysis['배치_표시명']))
         else:
-            batch_display_dict = dict(zip(batch_ids, batch_ids))
+            batch_display_dict = dict(zip(data_analysis.index, data_analysis.index))
+
+    # 변수 선택 (숫자형 데이터만)
+    numeric_cols = data_analysis.select_dtypes(include=[np.number]).columns.tolist()
+    
+    if not numeric_cols:
+        st.error("분석할 수 있는 숫자형 변수가 없습니다. 데이터를 확인해주세요.")
+        st.stop()
+        
+    # 변수 선택
+    selected_vars = st.multiselect(
+        "분석할 변수 선택 (숫자형 변수만 표시됩니다):",
+        options=numeric_cols,
+        default=numeric_cols[:min(8, len(numeric_cols))]
+    )
     
     # Z-점수 임계값 설정
     st.subheader("특이값 분석 설정")
@@ -135,16 +161,6 @@ if 'data' in st.session_state and st.session_state.data is not None:
         help="이 값보다 큰 절대 Z-점수를 가진 값을 특이값으로 간주합니다."
     )
     
-    # 변수 선택 (숫자형 데이터만)
-    numeric_cols = data_analysis.select_dtypes(include=[np.number]).columns.tolist()
-    
-    # 변수 선택
-    selected_vars = st.multiselect(
-        "분석할 변수 선택 (기본: 모든 숫자형 변수):",
-        options=numeric_cols,
-        default=numeric_cols[:min(8, len(numeric_cols))]  # 기본적으로 최대 8개 변수 선택
-    )
-    
     if not selected_vars:
         st.warning("최소한 하나 이상의 변수를 선택하세요.")
         selected_vars = numeric_cols[:1] if numeric_cols else []
@@ -157,22 +173,13 @@ if 'data' in st.session_state and st.session_state.data is not None:
             z_scores[f"{col}_zscore"] = stats.zscore(data_analysis[col], nan_policy='omit')
         
         # 각 배치별로 최대 Z-score 절대값 계산
-        max_abs_zscores = pd.Series(index=data_analysis.index, dtype=float)
-        
-        for batch in z_scores.index:
-            batch_zscores = []
-            for var in selected_vars:
-                z_col = f"{var}_zscore"
-                if z_col in z_scores.columns:
-                    batch_zscores.append(abs(z_scores.loc[batch, z_col]))
-            
-            if batch_zscores:
-                max_abs_zscores[batch] = max(batch_zscores)
-            else:
-                max_abs_zscores[batch] = 0
+        z_score_columns = [f"{var}_zscore" for var in selected_vars]
+        max_abs_zscores = z_scores[z_score_columns].abs().max(axis=1)
         
         # 특이 배치 식별 (Z-score가 임계값을 초과하는 배치)
-        unusual_batches = max_abs_zscores[max_abs_zscores > z_threshold].sort_values(ascending=False)
+        has_unusual = (max_abs_zscores > z_threshold).any()  # Series의 boolean 연산을 .any()로 처리
+        if has_unusual:
+            unusual_batches = max_abs_zscores[max_abs_zscores > z_threshold].sort_values(ascending=False)
         
         # 배치 선택을 위한 옵션
         st.subheader("관심 배치 선택")
@@ -184,29 +191,31 @@ if 'data' in st.session_state and st.session_state.data is not None:
         )
         
         if batch_selection_method == "특이값이 있는 배치만 보기":
-            if len(unusual_batches) > 0:
+            if has_unusual:  # boolean 값으로 직접 확인
                 selected_batch = st.selectbox(
                     "분석할 배치 선택 (Z-score 내림차순):",
-                    options=unusual_batches.index.tolist(),
-                    format_func=lambda x: f"{x} (최대 Z-score: {unusual_batches[x]:.2f})"
+                    options=unusual_batches.index,
+                    format_func=lambda x: f"{batch_display_dict[x]} (최대 Z-score: {unusual_batches[x]:.2f})"
                 )
                 
-                st.success(f"배치 '{selected_batch}'의 최대 Z-score는 {unusual_batches[selected_batch]:.2f}입니다.")
+                st.success(f"배치 '{batch_display_dict[selected_batch]}'의 최대 Z-score는 {unusual_batches[selected_batch]:.2f}입니다.")
             else:
-                st.warning(f"Z-score 임계값 {z_threshold}를 초과하는 배치가, 없습니다.")
+                st.warning(f"Z-score 임계값 {z_threshold}를 초과하는 배치가 없습니다.")
                 selected_batch = st.selectbox(
                     "분석할 배치 선택:",
-                    options=batch_ids
+                    options=list(batch_display_dict.keys()),
+                    format_func=lambda x: batch_display_dict[x]
                 )
         else:
             selected_batch = st.selectbox(
                 "분석할 배치 선택:",
-                options=batch_ids
+                options=list(batch_display_dict.keys()),
+                format_func=lambda x: batch_display_dict[x]
             )
         
         # 선택된 배치 분석
         if selected_batch:
-            st.header(f"배치 '{selected_batch}'의 변수별 Z-score 분석")
+            st.header(f"배치 '{batch_display_dict[selected_batch]}'의 변수별 Z-score 분석")
             
             # 선택된 배치의 Z-score 데이터 추출
             batch_zscores = {}
@@ -226,9 +235,9 @@ if 'data' in st.session_state and st.session_state.data is not None:
             # 특이값 요약
             outlier_count = zscore_df['특이값 여부'].sum()
             if outlier_count > 0:
-                st.warning(f"배치 '{selected_batch}'에서 {outlier_count}개 변수가 특이값으로 감지되었습니다.")
+                st.warning(f"배치 '{batch_display_dict[selected_batch]}'에서 {outlier_count}개 변수가 특이값으로 감지되었습니다.")
             else:
-                st.success(f"배치 '{selected_batch}'에서 특이값이 없습니다.")
+                st.success(f"배치 '{batch_display_dict[selected_batch]}'에서 특이값이 없습니다.")
             
             # 변수 Z-score 테이블
             st.markdown("### 변수별 Z-score")
@@ -239,7 +248,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             )
             
             # 선택된 배치의 변수별 Z-score 시각화
-            st.markdown(f"### 배치 '{selected_batch}'의 변수별 분포 및 Z-score")
+            st.markdown(f"### 배치 '{batch_display_dict[selected_batch]}'의 변수별 분포 및 Z-score")
             
             # 그래프 열 수 계산 - 한 행에 4개만 배치하여 더 넓게 표시
             max_cols_per_row = 4  # 6에서 4로 변경하여 더 넓게 표시
@@ -337,7 +346,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             fig.update_layout(
                 height=350 * n_rows,      # 높이 약간 증가
                 width=1200,               # 너비 더 넓게 설정
-                title=f"배치 '{selected_batch}'의 변수별 분포 분석 (빨간점: 현재 배치 값, 빨간색 테두리: 특이값)",
+                title=f"배치 '{batch_display_dict[selected_batch]}'의 변수별 분포 분석 (빨간점: 현재 배치 값, 빨간색 테두리: 특이값)",
                 showlegend=False,
                 margin=dict(l=20, r=20, t=100, b=30)  # 여백 줄이기
             )

@@ -351,29 +351,46 @@ with st.expander("📚 공정능력분석이란?"):
 
     ### 주요 지표 (정규분포 가정 시)
     
-    - **Cp (공정능력지수)**: 공정의 산포와 규격 폭의 비율
+    - **Cp (Process Capability Index / 공정능력지수)**: 공정의 산포와 규격 폭의 비율
+      - 정규분포 가정 하에 계산되는 지표
+      - 데이터가 정규분포를 따른다고 가정하고 계산
+      - 실제 데이터의 99.73%와 0.27% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
       - Cp = (USL - LSL) / (6σ)
       - **해석 기준**:
         - Cp ≥ 1.33: 우수 (공정이 매우 안정적)
         - 1.00 ≤ Cp < 1.33: 적절 (공정이 관리 가능한 수준)
         - Cp < 1.00: 부적합 (공정 개선 필요)
     
-    - **Cpk (공정능력지수K)**: 공정의 산포와 중심이탈을 함께 고려
+    - **Cpk (Process Capability Index K / 공정능력지수K)**: 공정의 산포와 중심이탈을 함께 고려
+      - 정규분포 가정 하에 공정의 산포와 중심이탈을 모두 고려한 지표
+      - 데이터가 정규분포를 따른다고 가정하고 계산
+      - 실제 데이터의 99.73%와 0.27% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
       - Cpk = min[(USL - μ) / (3σ), (μ - LSL) / (3σ)]
       - **해석 기준**:
         - Cpk ≥ 1.33: 우수 (공정이 규격 중심에 잘 맞춰져 있음)
         - 1.00 ≤ Cpk < 1.33: 적절 (공정이 규격을 만족하나 개선 여지 있음)
         - Cpk < 1.00: 부적합 (공정이 규격을 벗어날 위험이 높음)
     
-    - **Cpu (상한 공정능력지수)**: 상한규격에 대한 공정능력
+    - **Cpu (Process Capability Upper / 상한 공정능력지수)**: 공정이 상한규격(USL)을 넘지 않도록 하는 능력을 나타냄
+      - 정규분포 가정 하에 계산되는 지표
+      - 데이터가 정규분포를 따른다고 가정하고 계산
       - Cpu = (USL - μ) / (3σ)
+      - 값이 클수록 제품이 상한규격을 넘을 확률이 낮음
+      - Cp, Cpk와 해석 기준 동일함
     
-    - **Cpl (하한 공정능력지수)**: 하한규격에 대한 공정능력
+    - **Cpl (Process Capability Lower / 하한 공정능력지수)**: 공정이 하한규격(LSL)보다 작아지지 않도록 하는 능력을 나타냄
+      - 정규분포 가정 하에 계산되는 지표
+      - 데이터가 정규분포를 따른다고 가정하고 계산
       - Cpl = (μ - LSL) / (3σ)
-      
+      - 값이 클수록 제품이 하한규격보다 작아질 확률이 낮음
+      - Cp, Cpk와 해석 기준 동일함
+    
     ### 비모수적 지표 (정규분포 가정이 성립하지 않을 때)
     
-    - **Pp (백분위수 기반 공정능력지수)**: 
+    - **Pp (Process Performance Index / 백분위수 기반 공정능력지수)**:  정규분포 가정 없이 실제 데이터 분포를 기반으로 계산
+      - Cp와 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
+      - 데이터가 정규분포가 아니어도 사용 가능
+      - 실제 데이터의 99.865%와 0.135% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
       - Pp = (USL - LSL) / (P99.865 - P0.135)
       - 여기서 P99.865와 P0.135는 각각 99.865% 및 0.135% 백분위수
       - **해석 기준**:
@@ -381,13 +398,39 @@ with st.expander("📚 공정능력분석이란?"):
         - 1.00 ≤ Pp < 1.33: 적절 (공정이 관리 가능한 수준)
         - Pp < 1.00: 부적합 (공정 개선 필요)
     
-    - **Ppk (백분위수 기반 공정능력지수K)**: 
+    - **Ppk (Process Performance Index K /백분위수 기반 공정능력지수K)**: 정규분포 가정 없이 공정의 산포와 중심이탈을 모두 고려한 지표
+      - Cpk와 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
+      - 데이터가 정규분포가 아니어도 사용 가능
+      - 실제 데이터의 99.865%와 0.135% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
+      - 실제 데이터의 분포를 그대로 사용하여 공정의 산포와 중심이탈을 평가
       - Ppk = min[(USL - P50) / (P99.865 - P50), (P50 - LSL) / (P50 - P0.135)]
-      - 여기서 P50은 중앙값(50% 백분위수)
+      - 여기서 P50은 중앙값(50% 백분위수), P99.865와 P0.135는 각각 99.865% 및 0.135% 백분위수
       - **해석 기준**:
         - Ppk ≥ 1.33: 우수 (공정이 규격 중심에 잘 맞춰져 있음)
         - 1.00 ≤ Ppk < 1.33: 적절 (공정이 규격을 만족하나 개선 여지 있음)
         - Ppk < 1.00: 부적합 (공정이 규격을 벗어날 위험이 높음)
+    
+    - **Ppu (Process Performance Upper / 백분위수 기반 상한 공정능력지수)**: 정규분포 가정 없이 공정이 상한규격(USL)을 넘지 않도록 하는 능력을 나타냄
+      - Cpu와 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
+      - 데이터가 정규분포가 아니어도 사용 가능
+      - 실제 데이터의 99.865%와 50% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
+      - Ppu = (USL - P50) / (P99.865 - P50)
+      - 여기서 P50은 중앙값(50% 백분위수), P99.865는 99.865% 백분위수
+      - **해석 기준**:
+        - Ppu ≥ 1.33: 우수 (상한규격을 매우 안정적으로 만족)
+        - 1.00 ≤ Ppu < 1.33: 적절 (상한규격을 관리 가능한 수준으로 만족)
+        - Ppu < 1.00: 부적합 (상한규격을 만족하지 못함, 개선 필요)
+    
+    - **Ppl (Process Performance Lower / 백분위수 기반 하한 공정능력지수)**: 정규분포 가정 없이 공정이 하한규격(LSL)보다 작아지지 않도록 하는 능력을 나타냄
+      - Cpl과 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
+      - 데이터가 정규분포가 아니어도 사용 가능
+      - 실제 데이터의 50%와 0.135% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
+      - Ppl = (P50 - LSL) / (P50 - P0.135)
+      - 여기서 P50은 중앙값(50% 백분위수), P0.135는 0.135% 백분위수
+      - **해석 기준**:
+        - Ppl ≥ 1.33: 우수 (하한규격을 매우 안정적으로 만족)
+        - 1.00 ≤ Ppl < 1.33: 적절 (하한규격을 관리 가능한 수준으로 만족)
+        - Ppl < 1.00: 부적합 (하한규격을 만족하지 못함, 개선 필요)
     """)
 
 # 데이터 확인
@@ -671,23 +714,22 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 
                 # 이상치의 인덱스를 x_values에 매핑
                 outlier_indices = []
+                outlier_values = []
                 for idx in outlier_data.index:
                     try:
                         # 원본 데이터에서 이상치 인덱스 찾기
                         pos = var_data_original.index.get_loc(idx)
                         outlier_indices.append(pos)
+                        outlier_values.append(outlier_data[idx])
                     except:
                         continue
                 
-                # 이상치를 빨간색 X로 표시
+                # 이상치 데이터 포인트 추가
                 if outlier_indices:
-                    outlier_y = [var_data_original.iloc[i] for i in outlier_indices]
-                    outlier_hover = [f"이상치 ID: {var_data_original.index[i]}<br>값: {var_data_original.iloc[i]:.2f}" for i in outlier_indices]
-                    
                     fig_plotly.add_trace(
                         go.Scatter(
-                            x=[outlier_indices], 
-                            y=[outlier_y],
+                            x=outlier_indices,
+                            y=outlier_values,
                             mode='markers',
                             name='이상치',
                             marker=dict(
@@ -695,7 +737,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                                 size=10,
                                 symbol='x'
                             ),
-                            text=outlier_hover,
+                            text=[f"이상치: {v:.2f}" for v in outlier_values],
                             hoverinfo='text'
                         )
                     )
@@ -752,8 +794,10 @@ if 'data' in st.session_state and st.session_state.data is not None:
             # 정규성 검정 결과 표시
             if normality_result == "정규 분포 (p >= 0.05)":
                 st.success(f"✅ 정규성 검정 결과: 정규분포 가정을 만족합니다 ({shapiro_result})")
+                st.info("💡 p값이 0.05보다 크면 정규성을 만족합니다. 이 경우 Cp, Cpk 등의 정규분포 기반 지표를 사용합니다.")
             else:
                 st.warning(f"⚠️ 정규성 검정 결과: {normality_result} ({shapiro_result})")
+                st.info("💡 p값이 0.05보다 작으면 정규성을 만족하지 않습니다. 이 경우 Pp, Ppk 등의 비모수적 지표를 사용합니다.")
                 st.info("🔍 비모수적 방법(백분위수 기반)을 사용하여 공정능력지수를 계산합니다.")
             
             # 정규성 시각화(QQ-Plot) 부분을 Plotly로 변경
