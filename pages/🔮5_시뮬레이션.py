@@ -611,210 +611,224 @@ if data is not None:
                         
                         # X의 공분산 행렬의 역행렬
                         X_with_intercept = np.column_stack([np.ones(n), X_train])
-                        var_b = mse * np.linalg.inv(np.dot(X_with_intercept.T, X_with_intercept)).diagonal()
                         
-                        # 표준 오차
-                        sd_b = np.sqrt(var_b)
-                        
-                        # t 통계량
-                        t_stat = coefficients / sd_b[1:]
-                        
-                        # p-value
-                        p_values = 2 * (1 - stats.t.cdf(np.abs(t_stat), dof))
-                        
-                        # 결과를 데이터프레임으로 변환
-                        regression_results = pd.DataFrame({
-                            '변수': X_train.columns,
-                            '회귀 계수': coefficients,
-                            '표준 오차': sd_b[1:],
-                            't 통계량': t_stat,
-                            'p-value': p_values
-                        })
-                        
-                        # p-value 기준으로 정렬
-                        regression_results = regression_results.sort_values('p-value')
-                        
-                        # 결과 표시
-                        st.dataframe(
-                            regression_results.style.format({
-                                '회귀 계수': '{:.4f}',
-                                '표준 오차': '{:.4f}',
-                                't 통계량': '{:.4f}',
-                                'p-value': '{:.4f}'
-                            }).background_gradient(cmap='RdYlBu_r', subset=['p-value']),
-                            use_container_width=True
-                        )
-                        
-                        # 회귀 방정식 표시
-                        st.markdown("#### 회귀 방정식:")
-                        equation = f"{target_col} = {model.intercept_:.4f}"
-                        for i, coef in enumerate(coefficients):
-                            if coef >= 0:
-                                equation += f" + {coef:.4f} × {X_train.columns[i]}"
-                            else:
-                                equation += f" - {abs(coef):.4f} × {X_train.columns[i]}"
-                        st.markdown(f"**{equation}**")
-                        
-                        # 회귀 모델 가정 검정
-                        st.markdown("#### 회귀 모델 가정 검정")
-                        
-                        # 회귀 모델 가정 검정 설명
-                        with st.expander("💡 회귀 모델 가정 검정 이해하기", expanded=False):
-                            st.markdown("""
-                            ### 회귀 모델 가정 검정 이해하기
+                        try:
+                            # 특이 행렬 문제를 방지하기 위해 np.linalg.pinv 사용
+                            var_b = mse * np.linalg.pinv(np.dot(X_with_intercept.T, X_with_intercept)).diagonal()
                             
-                            회귀 분석은 세 가지 주요 가정을 만족해야 신뢰할 수 있는 결과를 얻을 수 있습니다:
+                            # 표준 오차
+                            sd_b = np.sqrt(var_b)
                             
-                            1. **정규성(Normality)**
-                               - 잔차(예측값과 실제값의 차이)가 정규분포를 따라야 합니다
-                               - 이는 통계적 추론의 유효성을 보장합니다
+                            # t 통계량
+                            t_stat = coefficients / sd_b[1:]
                             
-                            2. **선형성(Linearity)**
-                               - 예측변수와 반응변수 간의 관계가 선형적이어야 합니다
-                               - 잔차가 예측값에 대해 무작위로 분포해야 합니다
+                            # p-value
+                            p_values = 2 * (1 - stats.t.cdf(np.abs(t_stat), dof))
                             
-                            3. **등분산성(Homoscedasticity)**
-                               - 잔차의 분산이 모든 예측값에서 동일해야 합니다
-                               - 이는 모델의 예측이 모든 범위에서 동일한 정확도를 가져야 함을 의미합니다
+                            # 결과를 데이터프레임으로 변환
+                            regression_results = pd.DataFrame({
+                                '변수': X_train.columns,
+                                '회귀 계수': coefficients,
+                                '표준 오차': sd_b[1:],
+                                't 통계량': t_stat,
+                                'p-value': p_values
+                            })
                             
-                            아래 그래프들을 통해 이러한 가정들이 만족되는지 확인할 수 있습니다.
-                            """)
-                        
-                        # 1. 정규성 검정 (잔차의 정규성)
-                        residuals = y_train - model.predict(X_train)
-                        _, p_value = stats.normaltest(residuals)
-                        
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            # 정규성 검정 결과
-                            st.markdown("**1. 잔차의 정규성 검정**")
-                            if p_value < 0.05:
-                                st.warning(f"잔차가 정규분포를 따르지 않습니다 (p-value: {p_value:.4f})")
-                            else:
-                                st.success(f"잔차가 정규분포를 따릅니다 (p-value: {p_value:.4f})")
+                            # p-value 기준으로 정렬
+                            regression_results = regression_results.sort_values('p-value')
                             
-                            # 정규성 검정 설명
-                            st.markdown("""
-                            #### 정규성 검정 그래프 해석
-                            - 이 그래프는 잔차의 분포를 보여줍니다
-                            - 이상적인 경우: 종 모양(bell-shaped)의 대칭적인 분포
-                            - 빨간색 점선: 정규분포 곡선
-                            - 해석:
-                              - 분포가 대칭적이고 종 모양이면 → 정규성 가정 만족
-                              - 분포가 비대칭이거나 꼬리가 두꺼우면 → 정규성 가정 위반
-                            """)
+                            # 결과 표시
+                            st.dataframe(
+                                regression_results.style.format({
+                                    '회귀 계수': '{:.4f}',
+                                    '표준 오차': '{:.4f}',
+                                    't 통계량': '{:.4f}',
+                                    'p-value': '{:.4f}'
+                                }).background_gradient(cmap='RdYlBu_r', subset=['p-value']),
+                                use_container_width=True
+                            )
                             
-                            # 잔차 히스토그램
-                            fig_residuals = go.Figure()
-                            fig_residuals.add_trace(
-                                go.Histogram(
-                                    x=residuals,
-                                    nbinsx=30,
-                                    name='잔차',
-                                    marker_color='#3498db'
+                            # 회귀 방정식 표시
+                            st.markdown("#### 회귀 방정식:")
+                            equation = f"{target_col} = {model.intercept_:.4f}"
+                            for i, coef in enumerate(coefficients):
+                                if coef >= 0:
+                                    equation += f" + {coef:.4f} × {X_train.columns[i]}"
+                                else:
+                                    equation += f" - {abs(coef):.4f} × {X_train.columns[i]}"
+                            st.markdown(f"**{equation}**")
+                            
+                            # 회귀 모델 가정 검정
+                            st.markdown("#### 회귀 모델 가정 검정")
+                            
+                            # 회귀 모델 가정 검정 설명
+                            with st.expander("💡 회귀 모델 가정 검정 이해하기", expanded=False):
+                                st.markdown("""
+                                ### 회귀 모델 가정 검정 이해하기
+                                
+                                회귀 분석은 세 가지 주요 가정을 만족해야 신뢰할 수 있는 결과를 얻을 수 있습니다:
+                                
+                                1. **정규성(Normality)**
+                                   - 잔차(예측값과 실제값의 차이)가 정규분포를 따라야 합니다
+                                   - 이는 통계적 추론의 유효성을 보장합니다
+                                
+                                2. **선형성(Linearity)**
+                                   - 예측변수와 반응변수 간의 관계가 선형적이어야 합니다
+                                   - 잔차가 예측값에 대해 무작위로 분포해야 합니다
+                                
+                                3. **등분산성(Homoscedasticity)**
+                                   - 잔차의 분산이 모든 예측값에서 동일해야 합니다
+                                   - 이는 모델의 예측이 모든 범위에서 동일한 정확도를 가져야 함을 의미합니다
+                                
+                                아래 그래프들을 통해 이러한 가정들이 만족되는지 확인할 수 있습니다.
+                                """)
+                            
+                            # 1. 정규성 검정 (잔차의 정규성)
+                            residuals = y_train - model.predict(X_train)
+                            _, p_value = stats.normaltest(residuals)
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                # 정규성 검정 결과
+                                st.markdown("**1. 잔차의 정규성 검정**")
+                                if p_value < 0.05:
+                                    st.warning(f"잔차가 정규분포를 따르지 않습니다 (p-value: {p_value:.4f})")
+                                else:
+                                    st.success(f"잔차가 정규분포를 따릅니다 (p-value: {p_value:.4f})")
+                                
+                                # 정규성 검정 설명
+                                st.markdown("""
+                                #### 정규성 검정 그래프 해석
+                                - 이 그래프는 잔차의 분포를 보여줍니다
+                                - 이상적인 경우: 종 모양(bell-shaped)의 대칭적인 분포
+                                - 빨간색 점선: 정규분포 곡선
+                                - 해석:
+                                  - 분포가 대칭적이고 종 모양이면 → 정규성 가정 만족
+                                  - 분포가 비대칭이거나 꼬리가 두꺼우면 → 정규성 가정 위반
+                                """)
+                                
+                                # 잔차 히스토그램
+                                fig_residuals = go.Figure()
+                                fig_residuals.add_trace(
+                                    go.Histogram(
+                                        x=residuals,
+                                        nbinsx=30,
+                                        name='잔차',
+                                        marker_color='#3498db'
+                                    )
                                 )
-                            )
-                            
-                            # 정규분포 곡선 추가
-                            x_range = np.linspace(min(residuals), max(residuals), 100)
-                            y_range = stats.norm.pdf(x_range, np.mean(residuals), np.std(residuals))
-                            fig_residuals.add_trace(
-                                go.Scatter(
-                                    x=x_range,
-                                    y=y_range,
-                                    mode='lines',
-                                    name='정규분포',
-                                    line=dict(color='red', dash='dash')
+                                
+                                # 정규분포 곡선 추가
+                                x_range = np.linspace(min(residuals), max(residuals), 100)
+                                y_range = stats.norm.pdf(x_range, np.mean(residuals), np.std(residuals))
+                                fig_residuals.add_trace(
+                                    go.Scatter(
+                                        x=x_range,
+                                        y=y_range,
+                                        mode='lines',
+                                        name='정규분포',
+                                        line=dict(color='red', dash='dash')
+                                    )
                                 )
-                            )
+                                
+                                fig_residuals.update_layout(
+                                    title='잔차 분포',
+                                    xaxis_title='잔차',
+                                    yaxis_title='빈도',
+                                    height=300
+                                )
+                                st.plotly_chart(fig_residuals, use_container_width=True)
                             
-                            fig_residuals.update_layout(
-                                title='잔차 분포',
-                                xaxis_title='잔차',
-                                yaxis_title='빈도',
-                                height=300
-                            )
-                            st.plotly_chart(fig_residuals, use_container_width=True)
-                        
-                        with col2:
-                            # 2. 선형성 검정 (잔차 vs 예측값)
-                            st.markdown("**2. 선형성 검정**")
+                            with col2:
+                                # 2. 선형성 검정 (잔차 vs 예측값)
+                                st.markdown("**2. 선형성 검정**")
+                                
+                                # 선형성 검정 설명
+                                st.markdown("""
+                                #### 선형성 검정 그래프 해석
+                                - 이 그래프는 예측값과 잔차의 관계를 보여줍니다
+                                - 이상적인 경우: 점들이 무작위로 분포하고 패턴이 없어야 함
+                                - 빨간색 점선: 0선 (잔차가 0인 기준선)
+                                - 해석:
+                                  - 점들이 무작위로 분포하면 → 선형성 가정 만족
+                                  - 점들이 패턴을 보이면 → 선형성 가정 위반
+                                  - 곡선형 패턴이 보이면 → 비선형 관계 존재
+                                """)
+                                
+                                # 잔차 vs 예측값 산점도
+                                fig_linearity = go.Figure()
+                                fig_linearity.add_trace(
+                                    go.Scatter(
+                                        x=model.predict(X_train),
+                                        y=residuals,
+                                        mode='markers',
+                                        marker=dict(color='#3498db', size=8, opacity=0.6),
+                                        name='잔차 vs 예측값'
+                                    )
+                                )
+                                
+                                # 0선 추가
+                                fig_linearity.add_shape(
+                                    type="line",
+                                    x0=min(model.predict(X_train)),
+                                    y0=0,
+                                    x1=max(model.predict(X_train)),
+                                    y1=0,
+                                    line=dict(color="red", width=1, dash="dash")
+                                )
+                                
+                                fig_linearity.update_layout(
+                                    title='잔차 vs 예측값',
+                                    xaxis_title='예측값',
+                                    yaxis_title='잔차',
+                                    height=300
+                                )
+                                st.plotly_chart(fig_linearity, use_container_width=True)
                             
-                            # 선형성 검정 설명
+                            # 3. 등분산성 검정
+                            st.markdown("**3. 등분산성 검정**")
+                            
+                            # 등분산성 검정 설명
                             st.markdown("""
-                            #### 선형성 검정 그래프 해석
-                            - 이 그래프는 예측값과 잔차의 관계를 보여줍니다
+                            #### 등분산성 검정 그래프 해석
+                            - 이 그래프는 예측값과 잔차의 절대값 관계를 보여줍니다
                             - 이상적인 경우: 점들이 무작위로 분포하고 패턴이 없어야 함
-                            - 빨간색 점선: 0선 (잔차가 0인 기준선)
                             - 해석:
-                              - 점들이 무작위로 분포하면 → 선형성 가정 만족
-                              - 점들이 패턴을 보이면 → 선형성 가정 위반
-                              - 곡선형 패턴이 보이면 → 비선형 관계 존재
+                              - 점들이 무작위로 분포하면 → 등분산성 가정 만족
+                              - 점들이 깔때기 모양이나 다른 패턴을 보이면 → 등분산성 가정 위반
+                              - 잔차의 크기가 예측값에 따라 변면 → 이분산성(heteroscedasticity) 문제
                             """)
                             
-                            # 잔차 vs 예측값 산점도
-                            fig_linearity = go.Figure()
-                            fig_linearity.add_trace(
+                            # 잔차의 절대값 vs 예측값
+                            fig_homoscedasticity = go.Figure()
+                            fig_homoscedasticity.add_trace(
                                 go.Scatter(
                                     x=model.predict(X_train),
-                                    y=residuals,
+                                    y=np.abs(residuals),
                                     mode='markers',
                                     marker=dict(color='#3498db', size=8, opacity=0.6),
-                                    name='잔차 vs 예측값'
+                                    name='|잔차| vs 예측값'
                                 )
                             )
                             
-                            # 0선 추가
-                            fig_linearity.add_shape(
-                                type="line",
-                                x0=min(model.predict(X_train)),
-                                y0=0,
-                                x1=max(model.predict(X_train)),
-                                y1=0,
-                                line=dict(color="red", width=1, dash="dash")
-                            )
-                            
-                            fig_linearity.update_layout(
-                                title='잔차 vs 예측값',
+                            fig_homoscedasticity.update_layout(
+                                title='|잔차| vs 예측값 (등분산성 검정)',
                                 xaxis_title='예측값',
-                                yaxis_title='잔차',
+                                yaxis_title='|잔차|',
                                 height=300
                             )
-                            st.plotly_chart(fig_linearity, use_container_width=True)
-                        
-                        # 3. 등분산성 검정
-                        st.markdown("**3. 등분산성 검정**")
-                        
-                        # 등분산성 검정 설명
-                        st.markdown("""
-                        #### 등분산성 검정 그래프 해석
-                        - 이 그래프는 예측값과 잔차의 절대값 관계를 보여줍니다
-                        - 이상적인 경우: 점들이 무작위로 분포하고 패턴이 없어야 함
-                        - 해석:
-                          - 점들이 무작위로 분포하면 → 등분산성 가정 만족
-                          - 점들이 깔때기 모양이나 다른 패턴을 보이면 → 등분산성 가정 위반
-                          - 잔차의 크기가 예측값에 따라 변면 → 이분산성(heteroscedasticity) 문제
-                        """)
-                        
-                        # 잔차의 절대값 vs 예측값
-                        fig_homoscedasticity = go.Figure()
-                        fig_homoscedasticity.add_trace(
-                            go.Scatter(
-                                x=model.predict(X_train),
-                                y=np.abs(residuals),
-                                mode='markers',
-                                marker=dict(color='#3498db', size=8, opacity=0.6),
-                                name='|잔차| vs 예측값'
-                            )
-                        )
-                        
-                        fig_homoscedasticity.update_layout(
-                            title='|잔차| vs 예측값 (등분산성 검정)',
-                            xaxis_title='예측값',
-                            yaxis_title='|잔차|',
-                            height=300
-                        )
-                        st.plotly_chart(fig_homoscedasticity, use_container_width=True)
+                            st.plotly_chart(fig_homoscedasticity, use_container_width=True)
+                            
+                        except np.linalg.LinAlgError:
+                            st.error("선형 회귀 분석 중 오류가 발생했습니다. 선택한 변수들 간에 강한 상관관계가 있어 분석이 불가능합니다. 다른 변수 조합을 선택해보세요.")
+                            st.info("다중공선성 문제가 발생했을 수 있습니다. 변수들 간의 상관관계를 확인하고 중복된 정보를 제공하는 변수를 제거해보세요.")
+                            
+                            # 상관관계 히트맵 표시
+                            st.subheader("변수 간 상관관계")
+                            corr_matrix = X_train.corr()
+                            fig, ax = plt.subplots(figsize=(10, 8))
+                            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
+                            st.pyplot(fig)
                     
                     # 모델 및 특성 저장
                     st.session_state.model = model

@@ -152,20 +152,50 @@ def upload_file():
     
     if uploaded_file is not None:
         try:
+            # 파일 내용 미리 확인
+            file_content = uploaded_file.read().decode('utf-8-sig', errors='ignore')
+            uploaded_file.seek(0)  # 파일 포인터를 다시 처음으로 이동
+            
+            # 파일이 비어있는지 확인
+            if not file_content.strip():
+                st.error("파일이 비어 있습니다.")
+                return None
+            
+            # 구분자 자동 감지
+            separators = [',', ';', '\t', '|']
+            detected_sep = None
+            
+            for sep in separators:
+                if sep in file_content:
+                    detected_sep = sep
+                    break
+            
+            if detected_sep is None:
+                st.warning("구분자를 감지할 수 없습니다. 기본 구분자(쉼표)를 사용합니다.")
+                detected_sep = ','
+            
             # 파일 인코딩 시도 (여러 인코딩 시도)
-            encodings = ['cp949', 'utf-8', 'euc-kr']
+            encodings = ['utf-8-sig', 'cp949', 'utf-8', 'euc-kr']
             data = None
             
             for encoding in encodings:
                 try:
-                    data = pd.read_csv(uploaded_file, encoding=encoding)
-                    st.success(f"파일이 성공적으로 로드되었습니다. (인코딩: {encoding})")
+                    # 파일 포인터를 다시 처음으로 이동
+                    uploaded_file.seek(0)
+                    data = pd.read_csv(uploaded_file, encoding=encoding, sep=detected_sep)
+                    if data.empty or data.shape[1] <= 1:
+                        st.warning(f"인코딩 {encoding}로 파일을 읽었지만 데이터가 없거나 컬럼이 하나만 있습니다.")
+                        continue
+                    st.success(f"파일이 성공적으로 로드되었습니다. (인코딩: {encoding}, 구분자: {detected_sep})")
                     break
                 except UnicodeDecodeError:
                     continue
+                except Exception as e:
+                    st.warning(f"인코딩 {encoding} 시도 중 오류 발생: {e}")
+                    continue
             
             if data is None:
-                st.error("파일 인코딩을 인식할 수 없습니다. CP949, UTF-8 또는 EUC-KR 인코딩의 CSV 파일을 사용해주세요.")
+                st.error("파일을 읽을 수 없습니다. 파일 형식을 확인해주세요.")
                 return None
             
             st.session_state.data = data
