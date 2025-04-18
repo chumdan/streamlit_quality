@@ -1267,87 +1267,101 @@ if data is not None:
                     # 변수별 기여도 계산
                     contributions = {}
                     mean_values = {}
+                    valid_features = []
+                    
                     for feature in st.session_state.model_features:
-                        # 현재 값
-                        current_value = st.session_state.last_input_values[feature]
-                        mean_value = numeric_data[feature].mean()
-                        mean_values[feature] = mean_value
-                        
-                        # 변수의 영향력 계산
-                        if st.session_state.model_type == "선형 회귀":
-                            # 선형 회귀의 경우 계수를 사용
-                            coef = st.session_state.model.coef_[list(st.session_state.model_features).index(feature)]
-                            contribution = coef * (current_value - mean_value)
-                        else:
-                            # RandomForest나 XGBoost의 경우 feature_importances_를 사용
-                            importance = st.session_state.model.feature_importances_[list(st.session_state.model_features).index(feature)]
-                            contribution = importance * (current_value - mean_value) / mean_value
-                        
-                        contributions[feature] = contribution
+                        try:
+                            # 현재 값이 있는지 확인
+                            if feature not in st.session_state.last_input_values:
+                                st.warning(f"'{feature}' 변수가 입력값에 없어 기여도 계산에서 제외됩니다.")
+                                continue
+                            
+                            current_value = st.session_state.last_input_values[feature]
+                            mean_value = numeric_data[feature].mean()
+                            mean_values[feature] = mean_value
+                            valid_features.append(feature)
+                            
+                            # 변수의 영향력 계산
+                            if st.session_state.model_type == "선형 회귀":
+                                # 선형 회귀의 경우 계수를 사용
+                                coef = st.session_state.model.coef_[list(st.session_state.model_features).index(feature)]
+                                contribution = coef * (current_value - mean_value)
+                            else:
+                                # RandomForest나 XGBoost의 경우 feature_importances_를 사용
+                                importance = st.session_state.model.feature_importances_[list(st.session_state.model_features).index(feature)]
+                                contribution = importance * (current_value - mean_value) / mean_value
+                            
+                            contributions[feature] = contribution
+                        except Exception as e:
+                            st.warning(f"'{feature}' 변수의 기여도 계산 중 오류 발생: {str(e)}")
+                            continue
+                    
+                    if not contributions:
+                        st.error("기여도를 계산할 수 있는 변수가 없습니다.")
+                    else:
+                        # 기여도를 데이터프레임으로 변환
+                        contribution_df = pd.DataFrame({
+                            '변수': list(contributions.keys()),
+                            '기여도': list(contributions.values()),
+                            '평균 대비': [st.session_state.last_input_values[f] - mean_values[f] for f in contributions.keys()]
+                        })
 
-                    # 기여도를 데이터프레임으로 변환
-                    contribution_df = pd.DataFrame({
-                        '변수': list(contributions.keys()),
-                        '기여도': list(contributions.values()),
-                        '평균 대비': [st.session_state.last_input_values[f] - mean_values[f] for f in contributions.keys()]
-                    })
+                        # 기여도 기준으로 정렬
+                        contribution_df = contribution_df.sort_values('기여도', key=abs, ascending=False)
 
-                    # 기여도 기준으로 정렬
-                    contribution_df = contribution_df.sort_values('기여도', key=abs, ascending=False)
+                        # Plotly 그래프 생성
+                        fig_contribution = go.Figure()
 
-                    # Plotly 그래프 생성
-                    fig_contribution = go.Figure()
-
-                    # 기여도 바 차트
-                    fig_contribution.add_trace(
-                        go.Bar(
-                            y=contribution_df['변수'],
-                            x=contribution_df['기여도'],
-                            orientation='h',
-                            marker_color=np.where(contribution_df['기여도'] >= 0, '#3498db', '#e74c3c'),
-                            text=[f'{val:.4f}' for val in contribution_df['기여도']],
-                            textposition='outside',
-                            name='기여도',
-                            hovertemplate='%{y}: %{x:.4f}<extra></extra>'
+                        # 기여도 바 차트
+                        fig_contribution.add_trace(
+                            go.Bar(
+                                y=contribution_df['변수'],
+                                x=contribution_df['기여도'],
+                                orientation='h',
+                                marker_color=np.where(contribution_df['기여도'] >= 0, '#3498db', '#e74c3c'),
+                                text=[f'{val:.4f}' for val in contribution_df['기여도']],
+                                textposition='outside',
+                                name='기여도',
+                                hovertemplate='%{y}: %{x:.4f}<extra></extra>'
+                            )
                         )
-                    )
 
-                    # 레이아웃 설정
-                    fig_contribution.update_layout(
-                        title='변수별 기여도 분석',
-                        xaxis_title='기여도',
-                        yaxis_title='변수',
-                        height=500,
-                        margin=dict(l=20, r=20, t=40, b=20),
-                        showlegend=False,
-                        yaxis=dict(
-                            autorange='reversed'  # 기여도가 큰 순으로 정렬
+                        # 레이아웃 설정
+                        fig_contribution.update_layout(
+                            title='변수별 기여도 분석',
+                            xaxis_title='기여도',
+                            yaxis_title='변수',
+                            height=500,
+                            margin=dict(l=20, r=20, t=40, b=20),
+                            showlegend=False,
+                            yaxis=dict(
+                                autorange='reversed'  # 기여도가 큰 순으로 정렬
+                            )
                         )
-                    )
 
-                    # 그래프 표시
-                    display_plotly_centered(fig_contribution)
+                        # 그래프 표시
+                        display_plotly_centered(fig_contribution)
 
-                    # 평균 대비 영향 분석
-                    st.write("#### 평균 대비 변수 영향")
-                    influence_df = pd.DataFrame({
-                        '변수': contribution_df['변수'],
-                        '현재값': [st.session_state.last_input_values[f] for f in contribution_df['변수']],
-                        '평균값': [mean_values[f] for f in contribution_df['변수']],
-                        '차이': [st.session_state.last_input_values[f] - mean_values[f] for f in contribution_df['변수']],
-                        '차이(%)': [(st.session_state.last_input_values[f] - mean_values[f]) / mean_values[f] * 100 for f in contribution_df['변수']]
-                    })
+                        # 평균 대비 영향 분석
+                        st.write("#### 평균 대비 변수 영향")
+                        influence_df = pd.DataFrame({
+                            '변수': contribution_df['변수'],
+                            '현재값': [st.session_state.last_input_values[f] for f in contribution_df['변수']],
+                            '평균값': [mean_values[f] for f in contribution_df['변수']],
+                            '차이': [st.session_state.last_input_values[f] - mean_values[f] for f in contribution_df['변수']],
+                            '차이(%)': [(st.session_state.last_input_values[f] - mean_values[f]) / mean_values[f] * 100 for f in contribution_df['변수']]
+                        })
 
-                    # 스타일 적용
-                    st.dataframe(
-                        influence_df.style.format({
-                            '현재값': '{:.4f}',
-                            '평균값': '{:.4f}',
-                            '차이': '{:.4f}',
-                            '차이(%)': '{:.2f}%'
-                        }).background_gradient(cmap='RdYlBu_r', subset=['차이(%)']),
-                        use_container_width=True
-                    )
+                        # 스타일 적용
+                        st.dataframe(
+                            influence_df.style.format({
+                                '현재값': '{:.4f}',
+                                '평균값': '{:.4f}',
+                                '차이': '{:.4f}',
+                                '차이(%)': '{:.2f}%'
+                            }).background_gradient(cmap='RdYlBu_r', subset=['차이(%)']),
+                            use_container_width=True
+                        )
             else:
                 st.info("먼저 모델을 훈련해주세요.")
     else:
