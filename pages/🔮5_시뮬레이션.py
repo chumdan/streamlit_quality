@@ -1343,9 +1343,12 @@ if data is not None:
                     horizontal=True
                 )
                 
-                # 기존 시뮬레이션 코드 (들여쓰기 조정)
+                # 수동 시뮬레이션 부분 수정 - 슬라이더 생성
                 if simulation_mode == "수동 시뮬레이션":
                     st.write("아래 변수들의 값을 조정하여 예측해보세요:")
+                    
+                    # 선택한 원인변수에 대한 안내 문구 추가
+                    st.write(f"**선택한 {len(st.session_state.model_features)}개 원인변수에 대한 값을 조정해보세요:**")
                     
                     # 입력 위젯 생성
                     input_values = {}
@@ -1386,7 +1389,7 @@ if data is not None:
                             st.session_state.target_mean = numeric_data[target_col].mean()
                             st.session_state.target_min = numeric_data[target_col].min()
                             st.session_state.target_max = numeric_data[target_col].max()
-                
+
                 else:  # 최적화 시뮬레이션
                     st.write("### 최적화 시뮬레이션")
                     st.write("목표값을 설정하고 최적의 변수 조합을 찾아보세요.")
@@ -1436,8 +1439,10 @@ if data is not None:
                         - 목표값에 도달하지 못할 경우 범위 조정 필요
                         """)
                     
-                    # 최적화 범위 설정
+                    # 최적화 범위 설정에 설명 추가
                     st.write("#### 변수 범위 설정")
+                    st.write(f"**선택한 {len(st.session_state.model_features)}개 원인변수에 대한 범위를 설정하세요:**")
+                    
                     variable_ranges = {}
                     
                     for feature in st.session_state.model_features:
