@@ -374,6 +374,40 @@ if data is not None:
             # 데이터 전처리 옵션
             st.write("### 데이터 전처리 옵션")
             
+            # 데이터 증강 옵션 추가
+            data_augmentation_options = st.expander("데이터 증강 옵션", expanded=False)
+            with data_augmentation_options:
+                apply_augmentation = st.checkbox("데이터 증강 적용", value=False,
+                                               help="데이터 증강을 통해 학습 데이터를 늘립니다.")
+                
+                if apply_augmentation:
+                    augmentation_method = st.radio(
+                        "증강 방법:",
+                        ["SMOTE", "가우시안 노이즈", "선형 보간"],
+                        horizontal=True,
+                        help="SMOTE: 소수 클래스의 샘플을 보간하여 증강\n가우시안 노이즈: 기존 데이터에 노이즈를 추가\n선형 보간: 기존 데이터 포인트 사이를 보간"
+                    )
+                    
+                    if augmentation_method == "SMOTE":
+                        # SMOTE는 분류 문제에 주로 사용되므로, 회귀 문제에 맞게 수정
+                        st.info("SMOTE는 분류 문제에 주로 사용되지만, 회귀 문제에도 적용할 수 있습니다.")
+                        smote_samples = st.slider("생성할 샘플 수", 
+                                                min_value=10, max_value=100, value=50, step=10,
+                                                help="생성할 샘플 수를 선택하세요. 너무 많은 샘플은 과적합을 유발할 수 있습니다.")
+                    
+                    elif augmentation_method == "가우시안 노이즈":
+                        noise_level = st.slider("노이즈 수준", 
+                                              min_value=0.01, max_value=0.1, value=0.05, step=0.01,
+                                              help="추가할 노이즈의 표준편차를 선택하세요.")
+                        noise_samples = st.slider("생성할 샘플 수", 
+                                                min_value=10, max_value=100, value=50, step=10,
+                                                help="생성할 샘플 수를 선택하세요.")
+                    
+                    else:  # 선형 보간
+                        interpolation_samples = st.slider("보간 샘플 수", 
+                                                        min_value=10, max_value=100, value=50, step=10,
+                                                        help="기존 데이터 포인트 사이에 생성할 샘플 수를 선택하세요.")
+            
             # 이상치 처리 옵션
             outlier_options = st.expander("이상치 처리 옵션", expanded=True)
             with outlier_options:
@@ -487,6 +521,142 @@ if data is not None:
                         # 이상치 제거 없이 원본 데이터 사용
                         X_cleaned = X_orig.copy()
                         y_cleaned = y_orig.copy()
+                    
+                    # 데이터 증강 적용
+                    if apply_augmentation:
+                        # 데이터 증강 전 데이터 건수
+                        before_aug_count = len(X_cleaned)
+                        
+                        # 데이터 증강 방법에 따라 적용
+                        if augmentation_method == "SMOTE":
+                            # SMOTE는 분류 문제에 주로 사용되므로, 회귀 문제에 맞게 수정
+                            from sklearn.neighbors import NearestNeighbors
+                            
+                            # 데이터 증강을 위한 함수
+                            def smote_for_regression(X, y, n_samples):
+                                # 데이터 증강을 위한 결과 저장
+                                X_aug = X.copy()
+                                y_aug = y.copy()
+                                
+                                # 타겟 변수를 구간으로 나누어 각 구간별로 샘플링
+                                y_bins = pd.qcut(y, q=5, labels=False)
+                                
+                                # 각 구간별로 SMOTE 적용
+                                for i in range(5):
+                                    # 현재 구간의 인덱스
+                                    current_indices = np.where(y_bins == i)[0]
+                                    
+                                    if len(current_indices) < 2:
+                                        continue
+                                    
+                                    # 현재 구간의 데이터
+                                    X_current = X.iloc[current_indices]
+                                    y_current = y.iloc[current_indices]
+                                    
+                                    # k-최근접 이웃 찾기
+                                    nbrs = NearestNeighbors(n_neighbors=2).fit(X_current)
+                                    distances, indices = nbrs.kneighbors(X_current)
+                                    
+                                    # 각 샘플에 대해 보간
+                                    for j in range(min(n_samples // 5, len(current_indices))):
+                                        # 랜덤하게 두 이웃 선택
+                                        idx = np.random.randint(0, len(current_indices))
+                                        neighbor_idx = indices[idx, 1]
+                                        
+                                        # 보간 계수
+                                        alpha = np.random.random()
+                                        
+                                        # 보간된 샘플 생성
+                                        X_interp = X_current.iloc[idx] * (1 - alpha) + X_current.iloc[neighbor_idx] * alpha
+                                        y_interp = y_current.iloc[idx] * (1 - alpha) + y_current.iloc[neighbor_idx] * alpha
+                                        
+                                        # 증강된 데이터 추가
+                                        X_aug = pd.concat([X_aug, pd.DataFrame([X_interp], columns=X.columns)], ignore_index=True)
+                                        y_aug = pd.concat([y_aug, pd.Series([y_interp], name=y.name)], ignore_index=True)
+                                
+                                return X_aug, y_aug
+                            
+                            # SMOTE 적용
+                            X_aug, y_aug = smote_for_regression(X_cleaned, y_cleaned, smote_samples)
+                            
+                            # 증강된 데이터 수 계산
+                            aug_count = len(X_aug) - before_aug_count
+                            aug_percentage = (aug_count / before_aug_count) * 100
+                            
+                            st.success(f"SMOTE를 통해 {aug_count}개({aug_percentage:.1f}%)의 샘플을 증강했습니다. (원본: {before_aug_count}개 → 증강: {len(X_aug)}개)")
+                            
+                            # 증강된 데이터 사용
+                            X_cleaned = X_aug
+                            y_cleaned = y_aug
+                            
+                        elif augmentation_method == "가우시안 노이즈":
+                            # 가우시안 노이즈 추가
+                            X_aug = X_cleaned.copy()
+                            y_aug = y_cleaned.copy()
+                            
+                            for _ in range(noise_samples):
+                                # 랜덤하게 원본 데이터 선택
+                                idx = np.random.randint(0, len(X_cleaned))
+                                
+                                # 가우시안 노이즈 생성
+                                X_noise = X_cleaned.iloc[idx] + np.random.normal(0, noise_level, size=len(X_cleaned.columns))
+                                y_noise = y_cleaned.iloc[idx] + np.random.normal(0, noise_level)
+                                
+                                # 증강된 데이터 추가
+                                X_aug = pd.concat([X_aug, pd.DataFrame([X_noise], columns=X_cleaned.columns)], ignore_index=True)
+                                y_aug = pd.concat([y_aug, pd.Series([y_noise], name=y_cleaned.name)], ignore_index=True)
+                            
+                            # 증강된 데이터 수 계산
+                            aug_count = len(X_aug) - before_aug_count
+                            aug_percentage = (aug_count / before_aug_count) * 100
+                            
+                            st.success(f"가우시안 노이즈를 통해 {aug_count}개({aug_percentage:.1f}%)의 샘플을 증강했습니다. (원본: {before_aug_count}개 → 증강: {len(X_aug)}개)")
+                            
+                            # 증강된 데이터 사용
+                            X_cleaned = X_aug
+                            y_cleaned = y_aug
+                            
+                        else:  # 선형 보간
+                            # 선형 보간
+                            X_aug = X_cleaned.copy()
+                            y_aug = y_cleaned.copy()
+                            
+                            # 데이터 포인트 쌍 생성
+                            pairs = []
+                            for i in range(len(X_cleaned)):
+                                for j in range(i+1, len(X_cleaned)):
+                                    pairs.append((i, j))
+                            
+                            # 랜덤하게 쌍 선택
+                            if len(pairs) > interpolation_samples:
+                                selected_pairs = np.random.choice(len(pairs), interpolation_samples, replace=False)
+                            else:
+                                selected_pairs = np.arange(len(pairs))
+                            
+                            # 선택된 쌍에 대해 보간
+                            for pair_idx in selected_pairs:
+                                i, j = pairs[pair_idx]
+                                
+                                # 보간 계수
+                                alpha = np.random.random()
+                                
+                                # 보간된 샘플 생성
+                                X_interp = X_cleaned.iloc[i] * (1 - alpha) + X_cleaned.iloc[j] * alpha
+                                y_interp = y_cleaned.iloc[i] * (1 - alpha) + y_cleaned.iloc[j] * alpha
+                                
+                                # 증강된 데이터 추가
+                                X_aug = pd.concat([X_aug, pd.DataFrame([X_interp], columns=X_cleaned.columns)], ignore_index=True)
+                                y_aug = pd.concat([y_aug, pd.Series([y_interp], name=y_cleaned.name)], ignore_index=True)
+                            
+                            # 증강된 데이터 수 계산
+                            aug_count = len(X_aug) - before_aug_count
+                            aug_percentage = (aug_count / before_aug_count) * 100
+                            
+                            st.success(f"선형 보간을 통해 {aug_count}개({aug_percentage:.1f}%)의 샘플을 증강했습니다. (원본: {before_aug_count}개 → 증강: {len(X_aug)}개)")
+                            
+                            # 증강된 데이터 사용
+                            X_cleaned = X_aug
+                            y_cleaned = y_aug
                     
                     # 데이터 부족 시 경고
                     if len(X_cleaned) < 20:
