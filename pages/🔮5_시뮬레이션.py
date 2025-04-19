@@ -224,18 +224,22 @@ if data is not None:
     numeric_data = data.select_dtypes(include=[np.number])
     
     # 상관관계 분석
-    if target_col in numeric_data.columns:
+    if target_col in numeric_data.columns and selected_features:
         # NaN 값 처리
         correlation_data = numeric_data.copy()
         correlation_data = correlation_data.fillna(correlation_data.mean())
         
-        # 상관계수 계산 - 절대값을 사용하지 않고 원래 값을 유지
-        correlations = correlation_data.corr()[target_col].sort_values(ascending=False)
-        correlations = correlations.drop(target_col)  # 타깃 변수 자신과의 상관관계 제외
+        # 사용자가 선택한 원인변수와 결과변수 간의 상관관계만 계산
+        correlations = correlation_data[selected_features].corrwith(correlation_data[target_col])
         
-        # 상위 변수 선택 시 절대값으로 정렬하되, 표시할 때는 원래 값 사용
-        top_indices = correlations.abs().sort_values(ascending=False).head(10).index
-        correlation_with_target = correlations[top_indices]
+        # 상관관계 절대값 기준으로 정렬 (높은 순)
+        correlations_sorted = correlations.abs().sort_values(ascending=False)
+        selected_indices = correlations_sorted.index
+        correlation_with_target = correlations[selected_indices]
+        
+        # 선택한 변수의 수를 확인하고 메시지 표시
+        num_selected = len(selected_features)
+        st.write(f"**선택한 {num_selected}개 원인변수와 결과변수 '{target_col}'의 상관관계:**")
         
         # 상관관계 시각화 (Plotly로 변경)
         fig_corr = go.Figure()
@@ -258,9 +262,9 @@ if data is not None:
         
         # 레이아웃 설정
         fig_corr.update_layout(
-            title=f'{target_col}와(과)의 상관관계 (상위 10개)',
+            title=f'선택한 원인변수와 {target_col}의 상관관계',
             xaxis_title='상관계수',
-            yaxis_title='변수',
+            yaxis_title='원인변수',
             height=500,
             margin=dict(l=20, r=20, t=40, b=20),
             xaxis=dict(
@@ -540,7 +544,7 @@ if data is not None:
             if st.button("모델 훈련"):
                 with st.spinner("모델 훈련 중..."):
                     # 원본 데이터 보존
-                    X_orig = correlation_data[top_indices].copy()
+                    X_orig = correlation_data[selected_indices].copy()
                     y_orig = correlation_data[target_col].copy()
                     
                     # 이상치 확인 및 시각화
@@ -1178,7 +1182,7 @@ if data is not None:
                     
                     # 모델 및 특성 저장
                     st.session_state.model = model
-                    st.session_state.model_features = top_indices.tolist()
+                    st.session_state.model_features = selected_indices.tolist()
                     st.session_state.remove_outliers = remove_outliers
                     st.session_state.apply_scaling = apply_scaling
                     st.session_state.model_type = model_type
