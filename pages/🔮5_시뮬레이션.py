@@ -367,6 +367,10 @@ if data is not None:
                 horizontal=True
             )
             
+            # 하이퍼파라미터 튜닝 옵션 추가
+            tune_hyperparams = st.checkbox("하이퍼파라미터 튜닝 적용", value=False,
+                                          help="모델의 하이퍼파라미터를 자동으로 최적화합니다.")
+            
             # 데이터 전처리 옵션
             st.write("### 데이터 전처리 옵션")
             
@@ -524,14 +528,92 @@ if data is not None:
                     
                     # 모델 훈련
                     if model_type == "RandomForest":
-                        model = RandomForestRegressor(n_estimators=100, random_state=42)
+                        if tune_hyperparams:
+                            # 하이퍼파라미터 튜닝
+                            from sklearn.model_selection import RandomizedSearchCV
+                            
+                            # 파라미터 그리드 정의
+                            param_dist = {
+                                'n_estimators': [50, 100, 200, 300, 500],
+                                'max_depth': [None, 10, 20, 30, 40, 50],
+                                'min_samples_split': [2, 5, 10],
+                                'min_samples_leaf': [1, 2, 4]
+                            }
+                            
+                            # 기본 모델
+                            base_model = RandomForestRegressor(random_state=42)
+                            
+                            # RandomizedSearchCV 설정
+                            random_search = RandomizedSearchCV(
+                                estimator=base_model,
+                                param_distributions=param_dist,
+                                n_iter=20,  # 시도할 파라미터 조합 수
+                                scoring='neg_mean_squared_error',
+                                cv=5,  # 5-fold 교차 검증
+                                verbose=0,
+                                random_state=42,
+                                n_jobs=-1  # 모든 CPU 코어 사용
+                            )
+                            
+                            # 하이퍼파라미터 튜닝 실행
+                            with st.spinner("하이퍼파라미터 튜닝 중..."):
+                                random_search.fit(X_train, y_train)
+                            
+                            # 최적 파라미터 출력
+                            st.success(f"최적 하이퍼파라미터: {random_search.best_params_}")
+                            
+                            # 최적 모델 선택
+                            model = random_search.best_estimator_
+                        else:
+                            model = RandomForestRegressor(n_estimators=100, random_state=42)
+                            model.fit(X_train, y_train)
+                            
                     elif model_type == "XGBoost":
-                        model = xgb.XGBRegressor(n_estimators=100, random_state=42)
+                        if tune_hyperparams:
+                            # 하이퍼파라미터 튜닝
+                            from sklearn.model_selection import RandomizedSearchCV
+                            
+                            # 파라미터 그리드 정의
+                            param_dist = {
+                                'n_estimators': [50, 100, 200, 300, 500],
+                                'max_depth': [3, 5, 7, 9, 11],
+                                'learning_rate': [0.01, 0.05, 0.1, 0.2],
+                                'subsample': [0.6, 0.8, 1.0],
+                                'colsample_bytree': [0.6, 0.8, 1.0]
+                            }
+                            
+                            # 기본 모델
+                            base_model = xgb.XGBRegressor(random_state=42)
+                            
+                            # RandomizedSearchCV 설정
+                            random_search = RandomizedSearchCV(
+                                estimator=base_model,
+                                param_distributions=param_dist,
+                                n_iter=20,  # 시도할 파라미터 조합 수
+                                scoring='neg_mean_squared_error',
+                                cv=5,  # 5-fold 교차 검증
+                                verbose=0,
+                                random_state=42,
+                                n_jobs=-1  # 모든 CPU 코어 사용
+                            )
+                            
+                            # 하이퍼파라미터 튜닝 실행
+                            with st.spinner("하이퍼파라미터 튜닝 중..."):
+                                random_search.fit(X_train, y_train)
+                            
+                            # 최적 파라미터 출력
+                            st.success(f"최적 하이퍼파라미터: {random_search.best_params_}")
+                            
+                            # 최적 모델 선택
+                            model = random_search.best_estimator_
+                        else:
+                            model = xgb.XGBRegressor(n_estimators=100, random_state=42)
+                            model.fit(X_train, y_train)
+                            
                     else:  # 선형 회귀
                         from sklearn.linear_model import LinearRegression
                         model = LinearRegression()
-                    
-                    model.fit(X_train, y_train)
+                        model.fit(X_train, y_train)
                     
                     # 모델 평가
                     y_pred = model.predict(X_test)
