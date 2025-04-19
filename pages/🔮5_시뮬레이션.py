@@ -1306,7 +1306,27 @@ if data is not None:
         with tab2:
             st.write("### 시뮬레이션")
             
-            if 'model' in st.session_state and 'model_features' in st.session_state:
+            # 모델 훈련 여부 확인
+            if 'model' not in st.session_state or 'model_features' not in st.session_state:
+                st.warning("⚠️ 먼저 '모델 훈련' 탭에서 모델을 훈련시켜야 합니다.")
+                st.info("모델 훈련 탭으로 이동하여 데이터를 업로드하고 모델을 훈련시켜주세요.")
+                
+                # 모델 훈련 탭으로 이동하는 버튼
+                if st.button("모델 훈련 탭으로 이동", type="primary"):
+                    # JavaScript 코드를 HTML로 감싸서 markdown으로 삽입
+                    js_code = '''
+                    <script>
+                        setTimeout(function() {
+                            const tabs = window.parent.document.querySelectorAll('[data-baseweb="tab-list"] [role="tab"]');
+                            if (tabs.length > 1) {
+                                tabs[0].click();
+                            }
+                        }, 500);
+                    </script>
+                    '''
+                    st.markdown(js_code, unsafe_allow_html=True)
+            
+            elif 'model' in st.session_state and 'model_features' in st.session_state:
                 # 시뮬레이션 모드 선택
                 simulation_mode = st.radio(
                     "시뮬레이션 모드:",
@@ -1314,6 +1334,7 @@ if data is not None:
                     horizontal=True
                 )
                 
+                # 기존 시뮬레이션 코드 (들여쓰기 조정)
                 if simulation_mode == "수동 시뮬레이션":
                     st.write("아래 변수들의 값을 조정하여 예측해보세요:")
                     
