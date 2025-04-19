@@ -16,6 +16,7 @@ import sys
 import traceback
 from scipy import stats
 import itertools
+from datetime import datetime
 
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -41,6 +42,10 @@ def display_plotly_centered(fig, width_pct=60):
 # 탭 선택을 위한 세션 상태 초기화
 if 'active_tab' not in st.session_state:
     st.session_state.active_tab = "모델 훈련"
+if 'model_id' not in st.session_state:
+    st.session_state.model_id = 0
+if 'model_info' not in st.session_state:
+    st.session_state.model_info = {}
 
 st.title("4. 시뮬레이션")
 
@@ -1320,6 +1325,23 @@ if data is not None:
                     # 모델 훈련 완료 메시지와 시뮬레이션 버튼
                     st.success("모델 훈련이 완료되었습니다!")
                     
+                    # 모델 ID 생성 및 정보 저장
+                    st.session_state.model_id += 1
+                    current_model_id = f"모델-{st.session_state.model_id}"
+                    
+                    # 모델 정보 저장
+                    st.session_state.model_info = {
+                        'id': current_model_id,
+                        'type': model_type,
+                        'features': len(st.session_state.model_features),
+                        'target': target_col,
+                        'r2_score': r2,
+                        'created_time': datetime.now().strftime("%Y-%m-%d %H:%M")
+                    }
+                    
+                    # 모델 정보 표시
+                    st.info(f"📊 **{current_model_id}**가 생성되었습니다! (유형: {model_type}, R² 점수: {r2:.4f})")
+                    
                     # 시뮬레이션 안내 메시지 추가
                     st.info("✅ 이제 상단의 '시뮬레이션' 탭을 클릭하여 학습된 모델로 다양한 시나리오를 시뮬레이션해 볼 수 있습니다.")
         
@@ -1335,6 +1357,29 @@ if data is not None:
                 st.markdown("👆 **상단의 '모델 훈련' 탭을 클릭해주세요!**")
             
             else:
+                # 현재 사용 중인 모델 정보 표시
+                if 'model_info' in st.session_state:
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col1:
+                        st.write("")
+                    with col2:
+                        st.markdown(
+                            f"""
+                            <div style="background-color:#f0f7fb; padding:10px; border-radius:5px; border-left:5px solid #4b8bf4;">
+                                <h4 style="margin:0;">📊 현재 사용 중인 모델</h4>
+                                <p><b>ID:</b> {st.session_state.model_info['id']}</p>
+                                <p><b>모델 유형:</b> {st.session_state.model_info['type']}</p>
+                                <p><b>결과변수:</b> {st.session_state.model_info['target']}</p>
+                                <p><b>원인변수 수:</b> {st.session_state.model_info['features']}개</p>
+                                <p><b>R² 점수:</b> {st.session_state.model_info['r2_score']:.4f}</p>
+                                <p><b>생성 시간:</b> {st.session_state.model_info['created_time']}</p>
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
+                    with col3:
+                        st.write("")
+                
                 # 여기서부터 기존 시뮬레이션 탭 내용
                 # 시뮬레이션 모드 선택
                 simulation_mode = st.radio(
