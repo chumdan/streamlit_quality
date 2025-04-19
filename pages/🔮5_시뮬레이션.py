@@ -38,6 +38,10 @@ def display_plotly_centered(fig, width_pct=60):
     with cols[1]:
         st.plotly_chart(fig, use_container_width=True)
 
+# 탭 선택을 위한 세션 상태 초기화
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = "모델 훈련"
+
 st.title("4. 시뮬레이션")
 
 # 시뮬레이션 개념 설명 추가
@@ -271,9 +275,18 @@ if data is not None:
         display_plotly_centered(fig_corr)
         
         # 탭 생성
-        tab1, tab2 = st.tabs(["모델 훈련", "시뮬레이션"])
+        if st.session_state.active_tab == "모델 훈련":
+            tab_selection = st.radio("", ["모델 훈련", "시뮬레이션"], index=0, horizontal=True, label_visibility="collapsed")
+        else:
+            tab_selection = st.radio("", ["모델 훈련", "시뮬레이션"], index=1, horizontal=True, label_visibility="collapsed")
         
-        with tab1:
+        # 선택한 탭이 바뀌면 세션 상태 업데이트 및 페이지 재실행
+        if tab_selection != st.session_state.active_tab:
+            st.session_state.active_tab = tab_selection
+            st.experimental_rerun()
+
+        # 선택된 탭에 따른 내용 표시
+        if st.session_state.active_tab == "모델 훈련":
             st.write("### 모델 훈련")
             
             # 회귀분석과 머신러닝의 차이점 설명
@@ -1303,30 +1316,21 @@ if data is not None:
                     # 모델 훈련 완료 메시지와 시뮬레이션 버튼
                     st.success("모델 훈련이 완료되었습니다!")
         
-        with tab2:
+        else:  # 시뮬레이션 탭
             st.write("### 시뮬레이션")
             
             # 모델 훈련 여부 확인
             if 'model' not in st.session_state or 'model_features' not in st.session_state:
-                st.warning("⚠️ 먼저 '모델 훈련' 탭에서 모델을 훈련시켜야 합니다.")
-                st.info("모델 훈련 탭으로 이동하여 데이터를 업로드하고 모델을 훈련시켜주세요.")
+                st.warning("⚠️ 먼저 모델 훈련을 완료해야 합니다.")
+                st.info("아래 버튼을 눌러 모델 훈련 탭으로 이동해주세요.")
                 
                 # 모델 훈련 탭으로 이동하는 버튼
                 if st.button("모델 훈련 탭으로 이동", type="primary"):
-                    # JavaScript 코드를 HTML로 감싸서 markdown으로 삽입
-                    js_code = '''
-                    <script>
-                        setTimeout(function() {
-                            const tabs = window.parent.document.querySelectorAll('[data-baseweb="tab-list"] [role="tab"]');
-                            if (tabs.length > 1) {
-                                tabs[0].click();
-                            }
-                        }, 500);
-                    </script>
-                    '''
-                    st.markdown(js_code, unsafe_allow_html=True)
+                    st.session_state.active_tab = "모델 훈련"
+                    st.experimental_rerun()
             
-            elif 'model' in st.session_state and 'model_features' in st.session_state:
+            else:
+                # 여기서부터 기존 시뮬레이션 탭 내용
                 # 시뮬레이션 모드 선택
                 simulation_mode = st.radio(
                     "시뮬레이션 모드:",
@@ -1716,10 +1720,8 @@ if data is not None:
                             }).background_gradient(cmap='RdYlBu_r', subset=['차이(%)']),
                             use_container_width=True
                         )
-            else:
-                st.info("먼저 모델을 훈련해주세요.")
     else:
-        st.error(f"타깃 변수 '{target_col}'을 찾을 수 없습니다.")
+        st.info("먼저 모델을 훈련해주세요.")
 else:
     st.info("시뮬레이션을 시작하려면 CSV 파일을 업로드해주세요.") 
 
