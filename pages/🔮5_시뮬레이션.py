@@ -176,7 +176,7 @@ if uploaded_file is not None:
 
 if data is not None:
     # 타깃 변수 선택
-    st.write("### 예측 타깃 변수 선택")
+    st.write("### 변수 선택")
     
     # 수치형 변수만 추출
     numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
@@ -195,24 +195,26 @@ if data is not None:
             st.error("변환 가능한 수치형 데이터가 없습니다. 다른 파일을 업로드해주세요.")
             st.stop()
     
-    # 추천 타겟 자동 선택
-    default_target = None
-    for col in numeric_cols:
-        if '용출' in col and ('최소' in col or 'min' in col.lower() or 'Min' in col):
-            default_target = col
-            break
-    
-    # 타겟 변수 선택 UI
-    if default_target:
-        st.info(f"'{default_target}' 컬럼이 기본 타겟으로 자동 선택되었습니다. 필요하면 변경하세요.")
-    
-    target_col = st.selectbox(
-        "예측할 타깃 변수를 선택하세요:",
-        numeric_cols,
-        index=numeric_cols.index(default_target) if default_target and default_target in numeric_cols else 0
+    # 1. 원인변수 선택
+    st.write("#### 1. 원인변수 선택")
+    selected_features = st.multiselect(
+        "원인변수를 선택하세요 (여러 개 선택 가능):",
+        options=numeric_cols,
+        help="예측에 사용할 원인변수들을 선택하세요."
     )
     
-    st.subheader(f"'{target_col}' 예측 모델링")
+    # 2. 결과변수 선택
+    st.write("#### 2. 결과변수 선택")
+    # 원인변수로 선택되지 않은 변수들 중에서 결과변수 선택
+    remaining_cols = [col for col in numeric_cols if col not in selected_features]
+    target_col = st.selectbox(
+        "결과변수를 선택하세요:",
+        options=remaining_cols,
+        help="예측하고자 하는 결과변수를 선택하세요."
+    )
+    
+    if selected_features and target_col:
+        st.subheader(f"'{target_col}' 예측 모델링")
     
     # 데이터 전처리
     numeric_data = data.select_dtypes(include=[np.number])
