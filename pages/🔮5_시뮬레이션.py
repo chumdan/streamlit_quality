@@ -276,9 +276,9 @@ if data is not None:
         
         # 탭 생성
         if st.session_state.active_tab == "모델 훈련":
-            tab_selection = st.radio("", ["모델 훈련", "시뮬레이션"], index=0, horizontal=True, label_visibility="collapsed")
+            tab_selection = st.radio("탭 선택", ["모델 훈련", "시뮬레이션"], index=0, horizontal=True, label_visibility="collapsed")
         else:
-            tab_selection = st.radio("", ["모델 훈련", "시뮬레이션"], index=1, horizontal=True, label_visibility="collapsed")
+            tab_selection = st.radio("탭 선택", ["모델 훈련", "시뮬레이션"], index=1, horizontal=True, label_visibility="collapsed")
         
         # 선택한 탭이 바뀌면 세션 상태 업데이트 및 페이지 재실행
         if tab_selection != st.session_state.active_tab:
@@ -1315,6 +1315,9 @@ if data is not None:
                     
                     # 모델 훈련 완료 메시지와 시뮬레이션 버튼
                     st.success("모델 훈련이 완료되었습니다!")
+                    
+                    # 시뮬레이션 안내 메시지 추가
+                    st.info("✅ 이제 상단의 '시뮬레이션' 탭을 클릭하여 학습된 모델로 다양한 시나리오를 시뮬레이션해 볼 수 있습니다.")
         
         else:  # 시뮬레이션 탭
             st.write("### 시뮬레이션")
@@ -1322,12 +1325,10 @@ if data is not None:
             # 모델 훈련 여부 확인
             if 'model' not in st.session_state or 'model_features' not in st.session_state:
                 st.warning("⚠️ 먼저 모델 훈련을 완료해야 합니다.")
-                st.info("아래 버튼을 눌러 모델 훈련 탭으로 이동해주세요.")
+                st.info("상단의 '모델 훈련' 탭으로 이동하여 데이터를 업로드하고 모델을 훈련시켜주세요.")
                 
-                # 모델 훈련 탭으로 이동하는 버튼
-                if st.button("모델 훈련 탭으로 이동", type="primary"):
-                    st.session_state.active_tab = "모델 훈련"
-                    st.experimental_rerun()
+                # 모델 훈련 탭으로 이동하는 버튼 삭제하고 문구로만 안내
+                st.markdown("👆 **상단의 '모델 훈련' 탭을 클릭해주세요!**")
             
             else:
                 # 여기서부터 기존 시뮬레이션 탭 내용
