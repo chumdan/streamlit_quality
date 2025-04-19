@@ -1482,6 +1482,30 @@ if data is not None:
                         - 시도 횟수를 늘리면 더 좋은 결과를 얻을 수 있음
                         - 변수의 범위를 적절히 설정하는 것이 중요
                         - 목표값에 도달하지 못할 경우 범위 조정 필요
+                        
+                        #### 5. 최적 범위 분석의 의미
+                        
+                        이 시스템에서는 단일 최적점만 찾는 것이 아니라 **최적 범위**도 함께 제공합니다:
+                        
+                        - **최적 범위란?** 목표값에 가장 가까운 상위 10개 결과에서 각 변수가 가지는 값의 범위입니다.
+                        
+                        - **실무적 가치:**
+                          - **운영 유연성**: 정확히 특정 값이 아닌, 허용 가능한 범위 내에서 운영 가능
+                          - **안정성**: 여러 가지 좋은 설정값 옵션을 제공하여 현장 상황에 맞게 선택 가능
+                          - **통찰력**: 각 변수가 얼마나 민감한지(좁은 범위) 또는 유연한지(넓은 범위) 파악 가능
+                        
+                        - **해석 방법:**
+                          - **좁은 최적 범위**: 해당 변수는 매우 정밀하게 제어해야 함을 의미
+                          - **넓은 최적 범위**: 해당 변수는 다양한 값에서도 좋은 결과를 얻을 수 있음
+                          - **범위 축소율**: 원래 설정한 범위에서 얼마나 좁아졌는지 보여주는 지표
+                          - **겹침 비율**: 초기 설정 범위가 얼마나 적절했는지 보여주는 지표
+                        
+                        - **활용 전략:**
+                          - 핵심 변수(좁은 범위): 정밀 모니터링 및 제어 시스템 강화
+                          - 유연한 변수(넓은 범위): 다른 제약조건에 따라 조정 가능한 여유 변수로 활용
+                          - 최적 범위를 기반으로 실제 공정 설정값 결정 시 현장 여건 반영
+                        
+                        랜덤 서치와 최적 범위 분석을 결합함으로써, 이론적으로 완벽한 단일 값보다 현실에서 실제로 적용 가능한 실용적인 솔루션을 제공합니다.
                         """)
                     
                     # 최적화 범위 설정에 설명 추가
@@ -1530,6 +1554,9 @@ if data is not None:
                             progress_bar = st.progress(0)
                             status_text = st.empty()
                             
+                            # 랜덤 서치 결과 저장을 위한 리스트
+                            all_results = []
+                            
                             # 랜덤 서치 수행
                             for i in range(n_iterations):
                                 # 진행 상황 업데이트
@@ -1557,6 +1584,14 @@ if data is not None:
                                 # 목표값과의 차이 계산
                                 diff = abs(prediction - target_value)
                                 
+                                # 결과 저장
+                                result = {
+                                    'inputs': current_input.copy(),
+                                    'prediction': prediction,
+                                    'diff': diff
+                                }
+                                all_results.append(result)
+                                
                                 # 최적 조합 업데이트
                                 if diff < min_diff:
                                     min_diff = diff
@@ -1567,9 +1602,15 @@ if data is not None:
                             progress_bar.progress(1.0)
                             status_text.text("최적화 완료!")
                             
+                            # 상위 N개 결과 선택 (타겟값에 가까운 결과)
+                            top_n = 10  # 상위 10개 결과
+                            all_results.sort(key=lambda x: x['diff'])
+                            top_results = all_results[:top_n]
+                            
                             # 최적화 결과 저장
                             st.session_state.last_prediction = best_prediction
                             st.session_state.last_input_values = best_input_values
+                            st.session_state.top_results = top_results
                             
                             # 타겟 통계 정보 저장
                             st.session_state.target_mean = numeric_data[target_col].mean()
@@ -1604,6 +1645,130 @@ if data is not None:
                         '값': list(st.session_state.last_input_values.values())
                     })
                     st.dataframe(optimal_values_df, use_container_width=True)
+                    
+                    # 최적화 모드에서 상위 결과 범위 시각화
+                    if simulation_mode == "최적화 시뮬레이션" and 'top_results' in st.session_state:
+                        st.write("### 최적값 범위 분석")
+                        st.write("목표값에 가까운 상위 10개 결과의 변수 범위입니다.")
+                        
+                        # 상위 결과에서 각 변수의 범위 계산
+                        optimal_ranges = {}
+                        for feature in st.session_state.model_features:
+                            if feature in st.session_state.last_input_values:
+                                values = [result['inputs'][feature] for result in st.session_state.top_results]
+                                optimal_ranges[feature] = {
+                                    'min': min(values),
+                                    'max': max(values),
+                                    'mean': sum(values) / len(values)
+                                }
+                        
+                        # 각 변수별로 설정 범위와 최적 범위 비교 그래프 생성
+                        for feature in optimal_ranges:
+                            st.write(f"#### {feature}")
+                            
+                            # 데이터 준비
+                            user_min = variable_ranges[feature]['min']
+                            user_max = variable_ranges[feature]['max']
+                            opt_min = optimal_ranges[feature]['min']
+                            opt_max = optimal_ranges[feature]['max']
+                            opt_mean = optimal_ranges[feature]['mean']
+                            
+                            # 그래프 생성
+                            fig = go.Figure()
+                            
+                            # 사용자 설정 범위
+                            fig.add_trace(go.Scatter(
+                                x=[user_min, user_max],
+                                y=['설정 범위', '설정 범위'],
+                                mode='markers',
+                                marker=dict(size=10, color='blue'),
+                                name='설정 범위'
+                            ))
+                            
+                            # 사용자 설정 범위를 선으로 연결
+                            fig.add_trace(go.Scatter(
+                                x=[user_min, user_max],
+                                y=['설정 범위', '설정 범위'],
+                                mode='lines',
+                                line=dict(width=2, color='blue'),
+                                showlegend=False
+                            ))
+                            
+                            # 최적 범위
+                            fig.add_trace(go.Scatter(
+                                x=[opt_min, opt_max],
+                                y=['최적 범위', '최적 범위'],
+                                mode='markers',
+                                marker=dict(size=10, color='red'),
+                                name='최적 범위'
+                            ))
+                            
+                            # 최적 범위를 선으로 연결
+                            fig.add_trace(go.Scatter(
+                                x=[opt_min, opt_max],
+                                y=['최적 범위', '최적 범위'],
+                                mode='lines',
+                                line=dict(width=2, color='red'),
+                                showlegend=False
+                            ))
+                            
+                            # 최적 평균값
+                            fig.add_trace(go.Scatter(
+                                x=[opt_mean],
+                                y=['최적 범위'],
+                                mode='markers',
+                                marker=dict(size=12, color='green', symbol='star'),
+                                name='최적 평균값'
+                            ))
+                            
+                            # 현재 최적값
+                            current_optimal = st.session_state.last_input_values[feature]
+                            fig.add_trace(go.Scatter(
+                                x=[current_optimal],
+                                y=['최적 범위'],
+                                mode='markers',
+                                marker=dict(size=14, color='gold', symbol='diamond'),
+                                name='최적값'
+                            ))
+                            
+                            # 레이아웃 설정
+                            fig.update_layout(
+                                title=f'{feature} 최적 범위 분석',
+                                xaxis_title=f'{feature} 값',
+                                yaxis=dict(
+                                    showticklabels=True,
+                                    tickmode='array',
+                                    tickvals=['설정 범위', '최적 범위'],
+                                    ticktext=['설정 범위', '최적 범위']
+                                ),
+                                height=300,
+                                margin=dict(l=20, r=20, t=50, b=30),
+                                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+                            )
+                            
+                            # 차이 백분율 계산
+                            user_range_size = user_max - user_min
+                            opt_range_size = opt_max - opt_min
+                            range_diff_pct = (1 - opt_range_size / user_range_size) * 100 if user_range_size > 0 else 0
+                            
+                            # 설명 텍스트 추가
+                            overlap = max(0, min(user_max, opt_max) - max(user_min, opt_min))
+                            overlap_pct = (overlap / user_range_size) * 100 if user_range_size > 0 else 0
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("설정 범위", f"{user_min:.4f} ~ {user_max:.4f}")
+                                st.metric("최적 범위", f"{opt_min:.4f} ~ {opt_max:.4f}")
+                            
+                            with col2:
+                                st.metric("범위 축소율", f"{range_diff_pct:.1f}%", 
+                                         f"{range_diff_pct:.1f}%" if range_diff_pct > 0 else f"{range_diff_pct:.1f}%")
+                                st.metric("설정 범위와 겹침", f"{overlap_pct:.1f}%")
+                                
+                            # 그래프 출력
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            st.write("---")
 
                     # 원인 분석 그래프 추가
                     st.write("### 원인 분석")
