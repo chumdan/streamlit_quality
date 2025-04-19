@@ -374,6 +374,84 @@ if data is not None:
             # 데이터 전처리 옵션
             st.write("### 데이터 전처리 옵션")
             
+            # 데이터 증강 옵션 설명
+            with st.expander("💡 데이터 증강 옵션 이해하기", expanded=False):
+                st.markdown("""
+                ### 데이터 증강 옵션 이해하기
+                
+                데이터 증강은 기존 데이터를 변형하여 새로운 데이터를 생성하는 기법입니다:
+                
+                1. **SMOTE (Synthetic Minority Over-sampling Technique)**
+                   - 소수 클래스의 샘플을 보간하여 새로운 데이터를 생성
+                   - 데이터의 분포를 유지하면서 샘플 수를 증가
+                   - 과적합 위험을 줄이면서 데이터 다양성 확보
+                
+                2. **가우시안 노이즈**
+                   - 기존 데이터에 랜덤한 노이즈를 추가하여 새로운 데이터 생성
+                   - 데이터의 변동성을 증가시키고 모델의 견고성 향상
+                   - 노이즈 수준을 조절하여 데이터 증강 정도 제어
+                
+                3. **선형 보간**
+                   - 기존 데이터 포인트 사이를 선형으로 보간하여 새로운 데이터 생성
+                   - 데이터의 연속성을 유지하면서 새로운 샘플 생성
+                   - 데이터의 패턴을 보존하면서 다양성 확보
+                
+                데이터 증강은 다음과 같은 경우에 특히 유용합니다:
+                - 데이터가 부족한 경우
+                - 데이터의 분포가 불균형한 경우
+                - 모델의 일반화 성능을 향상시키고 싶은 경우
+                """)
+
+            with st.expander("💡 데이터 증강 옵션 설정 가이드", expanded=False):
+                st.markdown("""
+                ### 데이터 증강 옵션 설정 가이드
+                
+                #### 1. SMOTE (Synthetic Minority Over-sampling Technique)
+                - **생성할 샘플 수 (10-100)**
+                  - 권장값: 50
+                  - 너무 많은 샘플 생성 시 과적합 위험
+                  - 너무 적은 샘플은 효과가 미미
+                  - 데이터 크기의 20-50% 정도가 적절
+                
+                #### 2. 가우시안 노이즈
+                - **노이즈 수준 (0.01-0.1)**
+                  - 권장값: 0.05
+                  - 0.01: 미세한 변화만 추가
+                  - 0.05: 중간 정도의 변화
+                  - 0.1: 큰 변화 추가
+                  - 데이터의 표준편차의 5-10% 정도가 적절
+                
+                - **생성할 샘플 수 (10-100)**
+                  - 권장값: 50
+                  - 노이즈 수준과 함께 고려
+                  - 높은 노이즈 수준에서는 적은 샘플 수 권장
+                
+                #### 3. 선형 보간
+                - **보간 샘플 수 (10-100)**
+                  - 권장값: 50
+                  - 데이터 포인트 간의 간격을 고려
+                  - 너무 많은 샘플은 원본 데이터의 특성을 왜곡할 수 있음""")
+                  
+            with st.expander("💡 옵션 선택 시 고려사항", expanded=False):
+                st.markdown("""
+                ### 데이터 증강 옵션 이해하기
+                
+                1. **데이터의 특성**
+                   - 데이터가 부족한 경우: SMOTE 권장
+                   - 데이터가 불안정한 경우: 가우시안 노이즈 권장
+                   - 데이터가 연속적인 경우: 선형 보간 권장
+                
+                2. **모델의 성능**
+                   - 과적합 발생 시: 샘플 수 감소 또는 노이즈 수준 감소
+                   - 과소적합 발생 시: 샘플 수 증가 또는 노이즈 수준 증가
+                
+                3. **데이터의 분포**
+                   - 균형잡힌 분포: 선형 보간 권장
+                   - 불균형한 분포: SMOTE 권장
+                   - 노이즈가 많은 분포: 가우시안 노이즈 권장
+                """)
+ 
+
             # 데이터 증강 옵션 추가
             data_augmentation_options = st.expander("데이터 증강 옵션", expanded=False)
             with data_augmentation_options:
@@ -391,22 +469,23 @@ if data is not None:
                     if augmentation_method == "SMOTE":
                         # SMOTE는 분류 문제에 주로 사용되므로, 회귀 문제에 맞게 수정
                         st.info("SMOTE는 분류 문제에 주로 사용되지만, 회귀 문제에도 적용할 수 있습니다.")
+                        st.warning("SMOTE는 원본 데이터의 최대 2배까지만 증강이 가능합니다.")
                         smote_samples = st.slider("생성할 샘플 수", 
-                                                min_value=10, max_value=100, value=50, step=10,
-                                                help="생성할 샘플 수를 선택하세요. 너무 많은 샘플은 과적합을 유발할 수 있습니다.")
+                                                min_value=10, max_value=len(data)*2, value=50, step=10,
+                                                help="생성할 샘플 수를 선택하세요. 원본 데이터의 2배를 초과할 수 없습니다.")
                     
                     elif augmentation_method == "가우시안 노이즈":
                         noise_level = st.slider("노이즈 수준", 
                                               min_value=0.01, max_value=0.1, value=0.05, step=0.01,
                                               help="추가할 노이즈의 표준편차를 선택하세요.")
                         noise_samples = st.slider("생성할 샘플 수", 
-                                                min_value=10, max_value=100, value=50, step=10,
-                                                help="생성할 샘플 수를 선택하세요.")
+                                                min_value=10, max_value=300, value=50, step=10,
+                                                help="생성할 샘플 수를 선택하세요. 최대 300개까지 가능합니다.")
                     
                     else:  # 선형 보간
                         interpolation_samples = st.slider("보간 샘플 수", 
-                                                        min_value=10, max_value=100, value=50, step=10,
-                                                        help="기존 데이터 포인트 사이에 생성할 샘플 수를 선택하세요.")
+                                                        min_value=10, max_value=300, value=50, step=10,
+                                                        help="기존 데이터 포인트 사이에 생성할 샘플 수를 선택하세요. 최대 300개까지 가능합니다.")
             
             # 이상치 처리 옵션
             outlier_options = st.expander("이상치 처리 옵션", expanded=True)
