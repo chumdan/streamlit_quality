@@ -8,6 +8,8 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import io # io 모듈 추가
+from statsmodels.stats.multicomp import pairwise_tukeyhsd  # Tukey's HSD 사후분석용
+
 
 # 한글 폰트 설정 (matplotlib용)
 plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -676,8 +678,6 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     # Tukey's HSD 사후분석 수행
                     st.write("#### 3. Tukey's HSD 사후분석")
                     st.write("각 그룹 쌍별로 평균 차이를 비교합니다.")
-                    
-                    from statsmodels.stats.multicomp import pairwise_tukeyhsd
                     
                     # 데이터 준비
                     values = data[numeric_var_anova].values

@@ -16,7 +16,8 @@ import sys
 import traceback
 from scipy import stats
 import itertools
-
+from datetime import datetime
+import base64
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
@@ -37,6 +38,224 @@ def display_plotly_centered(fig, width_pct=60):
     cols = st.columns([left_margin, width_pct, right_margin])
     with cols[1]:
         st.plotly_chart(fig, use_container_width=True)
+        
+# 데이터 증강 결과를 보여주는 함수
+def display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method):
+    """
+    데이터 증강 결과를 시각화하고 다운로드 옵션을 제공하는 함수
+    
+    Parameters:
+    -----------
+    X_orig : DataFrame
+        원본 특성 데이터
+    y_orig : Series
+        원본 타겟 데이터
+    X_aug : DataFrame
+        증강된 특성 데이터
+    y_aug : Series
+        증강된 타겟 데이터
+    augmentation_method : str
+        사용된 데이터 증강 방법
+    """
+    # 증강 결과 시각화를 위한 데이터 저장
+    st.session_state.augmented_data = {
+        'X_original': X_orig,
+        'y_original': y_orig,
+        'X_augmented': X_aug,
+        'y_augmented': y_aug,
+        'augmentation_method': augmentation_method
+    }
+    
+    # 증강 결과 시각화 섹션
+    with st.expander("📊 데이터 증강 결과 분석", expanded=False):
+        st.write("### 데이터 증강 결과 분석")
+        
+        # 각 변수별로 분석
+        for col in X_orig.columns:
+            st.write(f"#### {col} 변수 분석")
+            
+            # 두 열로 레이아웃 분할
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # 히스토그램 생성
+                fig = go.Figure()
+                
+                # 원본 데이터 히스토그램 (파란색)
+                fig.add_trace(go.Histogram(
+                    x=X_orig[col],
+                    name='원본 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='blue'
+                ))
+                
+                # 증강 데이터 히스토그램 (빨간색)
+                fig.add_trace(go.Histogram(
+                    x=X_aug[col],
+                    name='증강 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='red'
+                ))
+                
+                # 레이아웃 설정
+                fig.update_layout(
+                    title=f'{col} 분포 비교',
+                    xaxis_title='값',
+                    yaxis_title='빈도',
+                    barmode='overlay',
+                    height=300,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # 통계치 비교 테이블 생성
+                stats_comparison = pd.DataFrame({
+                    '통계치': ['평균', '표준편차', '최소값', '최대값', '중앙값'],
+                    '원본 데이터': [
+                        X_orig[col].mean(),
+                        X_orig[col].std(),
+                        X_orig[col].min(),
+                        X_orig[col].max(),
+                        X_orig[col].median()
+                    ],
+                    '증강 데이터': [
+                        X_aug[col].mean(),
+                        X_aug[col].std(),
+                        X_aug[col].min(),
+                        X_aug[col].max(),
+                        X_aug[col].median()
+                    ]
+                })
+                
+                # 통계치 포맷팅
+                stats_comparison['원본 데이터'] = stats_comparison['원본 데이터'].round(4)
+                stats_comparison['증강 데이터'] = stats_comparison['증강 데이터'].round(4)
+                
+                # 차이 계산
+                stats_comparison['차이'] = (stats_comparison['증강 데이터'] - stats_comparison['원본 데이터']).round(4)
+                
+                st.dataframe(stats_comparison, use_container_width=True)
+        
+        # 결과 변수 분석 추가
+        if y_orig.name:
+            st.write(f"#### {y_orig.name} (결과 변수) 분석")
+            
+            # 두 열로 레이아웃 분할
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # 히스토그램 생성
+                fig = go.Figure()
+                
+                # 원본 데이터 히스토그램 (파란색)
+                fig.add_trace(go.Histogram(
+                    x=y_orig,
+                    name='원본 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='blue'
+                ))
+                
+                # 증강 데이터 히스토그램 (빨간색)
+                fig.add_trace(go.Histogram(
+                    x=y_aug,
+                    name='증강 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='red'
+                ))
+                
+                # 레이아웃 설정
+                fig.update_layout(
+                    title=f'{y_orig.name} 분포 비교',
+                    xaxis_title='값',
+                    yaxis_title='빈도',
+                    barmode='overlay',
+                    height=300,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # 통계치 비교 테이블 생성
+                stats_comparison = pd.DataFrame({
+                    '통계치': ['평균', '표준편차', '최소값', '최대값', '중앙값'],
+                    '원본 데이터': [
+                        y_orig.mean(),
+                        y_orig.std(),
+                        y_orig.min(),
+                        y_orig.max(),
+                        y_orig.median()
+                    ],
+                    '증강 데이터': [
+                        y_aug.mean(),
+                        y_aug.std(),
+                        y_aug.min(),
+                        y_aug.max(),
+                        y_aug.median()
+                    ]
+                })
+                
+                # 통계치 포맷팅
+                stats_comparison['원본 데이터'] = stats_comparison['원본 데이터'].round(4)
+                stats_comparison['증강 데이터'] = stats_comparison['증강 데이터'].round(4)
+                
+                # 차이 계산
+                stats_comparison['차이'] = (stats_comparison['증강 데이터'] - stats_comparison['원본 데이터']).round(4)
+                
+                st.dataframe(stats_comparison, use_container_width=True)
+    
+    # 증강 데이터 다운로드 버튼 (섹션 밖에 배치)
+    st.write("#### 증강 데이터 다운로드")
+    
+    # 원본 데이터와 증강 데이터 구분을 위한 열 추가
+    # 원본 데이터에 '데이터_유형' 열 추가
+    X_orig_with_type = X_orig.copy()
+    X_orig_with_type['데이터_유형'] = '원본'
+    
+    # 증강 데이터에 '데이터_유형' 열 추가
+    X_aug_with_type = X_aug.copy()
+    X_aug_with_type['데이터_유형'] = '가상'
+    
+    # 원본 데이터와 증강 데이터 합치기
+    combined_df = pd.concat([X_orig_with_type, X_aug_with_type], axis=0)
+    
+    # 타겟 변수 추가 (결과 변수 이름 확인)
+    target_name = y_orig.name if y_orig.name else 'target'
+    combined_df[target_name] = pd.concat([y_orig, y_aug], axis=0).values
+    
+    # 증강 데이터를 CSV로 변환 (한글 깨짐 방지)
+    csv = combined_df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+    
+    # 다운로드 링크 생성
+    b64 = base64.b64encode(csv).decode('utf-8-sig')
+    href = f'<a href="data:file/csv;charset=utf-8-sig;base64,{b64}" download="augmented_data.csv">증강 데이터 다운로드 (CSV)</a>'
+    st.markdown(href, unsafe_allow_html=True)
+
+# 탭 선택을 위한 세션 상태 초기화
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = "모델 훈련"
+if 'model_id' not in st.session_state:
+    st.session_state.model_id = 0
+if 'model_info' not in st.session_state:
+    st.session_state.model_info = {}
 
 st.title("4. 시뮬레이션")
 
@@ -176,7 +395,7 @@ if uploaded_file is not None:
 
 if data is not None:
     # 타깃 변수 선택
-    st.write("### 예측 타깃 변수 선택")
+    st.write("### 변수 선택")
     
     # 수치형 변수만 추출
     numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
@@ -195,41 +414,47 @@ if data is not None:
             st.error("변환 가능한 수치형 데이터가 없습니다. 다른 파일을 업로드해주세요.")
             st.stop()
     
-    # 추천 타겟 자동 선택
-    default_target = None
-    for col in numeric_cols:
-        if '용출' in col and ('최소' in col or 'min' in col.lower() or 'Min' in col):
-            default_target = col
-            break
-    
-    # 타겟 변수 선택 UI
-    if default_target:
-        st.info(f"'{default_target}' 컬럼이 기본 타겟으로 자동 선택되었습니다. 필요하면 변경하세요.")
-    
-    target_col = st.selectbox(
-        "예측할 타깃 변수를 선택하세요:",
-        numeric_cols,
-        index=numeric_cols.index(default_target) if default_target and default_target in numeric_cols else 0
+    # 1. 원인변수 선택
+    st.write("#### 1. 원인변수 선택")
+    selected_features = st.multiselect(
+        "원인변수를 선택하세요 (여러 개 선택 가능):",
+        options=numeric_cols,
+        help="예측에 사용할 원인변수들을 선택하세요."
     )
     
-    st.subheader(f"'{target_col}' 예측 모델링")
+    # 2. 결과변수 선택
+    st.write("#### 2. 결과변수 선택")
+    # 원인변수로 선택되지 않은 변수들 중에서 결과변수 선택
+    remaining_cols = [col for col in numeric_cols if col not in selected_features]
+    target_col = st.selectbox(
+        "결과변수를 선택하세요:",
+        options=remaining_cols,
+        help="예측하고자 하는 결과변수를 선택하세요."
+    )
+    
+    if selected_features and target_col:
+        st.subheader(f"'{target_col}' 예측 모델링")
     
     # 데이터 전처리
     numeric_data = data.select_dtypes(include=[np.number])
     
     # 상관관계 분석
-    if target_col in numeric_data.columns:
+    if target_col in numeric_data.columns and selected_features:
         # NaN 값 처리
         correlation_data = numeric_data.copy()
         correlation_data = correlation_data.fillna(correlation_data.mean())
         
-        # 상관계수 계산 - 절대값을 사용하지 않고 원래 값을 유지
-        correlations = correlation_data.corr()[target_col].sort_values(ascending=False)
-        correlations = correlations.drop(target_col)  # 타깃 변수 자신과의 상관관계 제외
+        # 사용자가 선택한 원인변수와 결과변수 간의 상관관계만 계산
+        correlations = correlation_data[selected_features].corrwith(correlation_data[target_col])
         
-        # 상위 변수 선택 시 절대값으로 정렬하되, 표시할 때는 원래 값 사용
-        top_indices = correlations.abs().sort_values(ascending=False).head(10).index
-        correlation_with_target = correlations[top_indices]
+        # 상관관계 절대값 기준으로 정렬 (높은 순)
+        correlations_sorted = correlations.abs().sort_values(ascending=False)
+        selected_indices = correlations_sorted.index
+        correlation_with_target = correlations[selected_indices]
+        
+        # 선택한 변수의 수를 확인하고 메시지 표시
+        num_selected = len(selected_features)
+        st.write(f"**선택한 {num_selected}개 원인변수와 결과변수 '{target_col}'의 상관관계:**")
         
         # 상관관계 시각화 (Plotly로 변경)
         fig_corr = go.Figure()
@@ -252,9 +477,9 @@ if data is not None:
         
         # 레이아웃 설정
         fig_corr.update_layout(
-            title=f'{target_col}와(과)의 상관관계 (상위 10개)',
+            title=f'선택한 원인변수와 {target_col}의 상관관계',
             xaxis_title='상관계수',
-            yaxis_title='변수',
+            yaxis_title='원인변수',
             height=500,
             margin=dict(l=20, r=20, t=40, b=20),
             xaxis=dict(
@@ -269,9 +494,18 @@ if data is not None:
         display_plotly_centered(fig_corr)
         
         # 탭 생성
-        tab1, tab2 = st.tabs(["모델 훈련", "시뮬레이션"])
+        if st.session_state.active_tab == "모델 훈련":
+            tab_selection = st.radio("탭 선택", ["모델 훈련", "시뮬레이션"], index=0, horizontal=True, label_visibility="collapsed")
+        else:
+            tab_selection = st.radio("탭 선택", ["모델 훈련", "시뮬레이션"], index=1, horizontal=True, label_visibility="collapsed")
         
-        with tab1:
+        # 선택한 탭이 바뀌면 세션 상태 업데이트 및 페이지 재실행
+        if tab_selection != st.session_state.active_tab:
+            st.session_state.active_tab = tab_selection
+            st.experimental_rerun()
+
+        # 선택된 탭에 따른 내용 표시
+        if st.session_state.active_tab == "모델 훈련":
             st.write("### 모델 훈련")
             
             # 회귀분석과 머신러닝의 차이점 설명
@@ -344,19 +578,73 @@ if data is not None:
                 ### 모델 종류와 특징
                 
                 #### 1. RandomForest (랜덤 포레스트)
+                **기본 개념**
                 - 여러 개의 의사결정 나무를 결합한 앙상블 모델
+                - 각 트리가 데이터의 일부와 변수의 일부만 사용하여 학습
+                - 여러 트리의 예측을 평균내어 최종 예측 도출
+                
+                **장점**
                 - 안정적이고 과적합에 강함
-                - 복잡한 관계도 잘 학습
+                - 복잡한 비선형 관계도 잘 학습
+                - 이상치(Outlier)의 영향을 적게 받음
+                - 변수 중요도를 제공하여 해석이 용이
                 
+                **단점**
+                - 모델 크기가 큼
+                - 예측에 시간이 다소 소요
+                - 매우 희박한 데이터에서는 성능이 저하될 수 있음
+                         
                 #### 2. XGBoost (엑스지부스트)
-                - 가장 성능이 좋은 부스팅 알고리즘 중 하나
-                - 높은 예측 정확도
-                - 계산 속도가 빠름
+                **기본 개념**
+                - Gradient Boosting의 발전된 형태
+                - 이전 모델의 오차를 보완하는 방식으로 순차적 학습
+                - 정규화(Regularization)가 포함되어 과적합 방지
                 
-                #### 3. 선형 회귀
-                - 가장 기본적인 통계 모델
-                - 결과 해석이 쉽고 직관적
-                - 단순한 선형 관계에 적합
+                **장점**
+                - 높은 예측 정확도 (대부분의 경우 최고 성능)
+                - 계산 속도가 빠름 (병렬 처리 지원)
+                - 결측치 자체 처리 가능
+                - 다양한 하이퍼파라미터로 세밀한 튜닝 가능
+                
+                **단점**
+                - 하이퍼파라미터 튜닝이 다소 복잡
+                - RandomForest보다 과적합 위험이 큼
+                - 데이터 크기가 작은 경우 과적합 주의 필요
+                
+                
+                #### 3. 선형 회귀 (Linear Regression)
+                **기본 개념**
+                - 종속변수와 독립변수 간의 선형 관계를 모델링
+                - 최소제곱법(OLS)으로 계수 추정
+                - y = β₀ + β₁x₁ + β₂x₂ + ... + βₙxₙ 형태
+                
+                **장점**
+                - 결과 해석이 매우 직관적
+                - 계산이 빠르고 자원 소모가 적음
+                - 변수 간 관계를 명확히 이해 가능
+                - 신뢰구간과 p-value 등 통계적 지표 제공
+                
+                **단점**
+                - 비선형 관계는 잘 잡아내지 못함
+                - 이상치에 민감
+                - 다중공선성 문제 주의 필요
+                - 변수 간 독립성 가정
+                
+                **실무 활용 팁**
+                - 변수 간 상관관계 확인 필수
+                - 정규성, 등분산성 가정 검토
+                - 필요시 변수 변환(로그, 제곱근 등) 고려
+                - VIF로 다중공선성 체크
+                
+                ### 🎯 모델 선택 가이드
+                1. **데이터가 선형성을 보이고 해석이 중요한 경우**
+                   → 선형 회귀 선택
+                
+                2. **안정적인 예측이 필요하고 과적합 우려가 있는 경우**
+                   → RandomForest 선택
+                
+                3. **최고의 예측 성능이 필요하고 충분한 데이터가 있는 경우**
+                   → XGBoost 선택
                 """)
             
             model_type = st.radio(
@@ -365,8 +653,125 @@ if data is not None:
                 horizontal=True
             )
             
+            # 하이퍼파라미터 튜닝 옵션 추가
+            tune_hyperparams = st.checkbox("하이퍼파라미터 튜닝 적용", value=False,
+                                          help="모델의 하이퍼파라미터를 자동으로 최적화합니다.")
+            
             # 데이터 전처리 옵션
             st.write("### 데이터 전처리 옵션")
+            
+            # 데이터 증강 옵션 설명
+            with st.expander("💡 데이터 증강 옵션 이해하기", expanded=False):
+                st.markdown("""
+                ### 데이터 증강 옵션 이해하기
+                
+                데이터 증강은 기존 데이터를 변형하여 새로운 데이터를 생성하는 기법입니다:
+                
+                1. **SMOTE (Synthetic Minority Over-sampling Technique)**
+                   - 소수 클래스의 샘플을 보간하여 새로운 데이터를 생성
+                   - 데이터의 분포를 유지하면서 샘플 수를 증가
+                   - 과적합 위험을 줄이면서 데이터 다양성 확보
+                
+                2. **가우시안 노이즈**
+                   - 기존 데이터에 랜덤한 노이즈를 추가하여 새로운 데이터 생성
+                   - 데이터의 변동성을 증가시키고 모델의 견고성 향상
+                   - 노이즈 수준을 조절하여 데이터 증강 정도 제어
+                
+                3. **선형 보간**
+                   - 기존 데이터 포인트 사이를 선형으로 보간하여 새로운 데이터 생성
+                   - 데이터의 연속성을 유지하면서 새로운 샘플 생성
+                   - 데이터의 패턴을 보존하면서 다양성 확보
+                
+                데이터 증강은 다음과 같은 경우에 특히 유용합니다:
+                - 데이터가 부족한 경우
+                - 데이터의 분포가 불균형한 경우
+                - 모델의 일반화 성능을 향상시키고 싶은 경우
+                """)
+
+            with st.expander("💡 데이터 증강 옵션 설정 가이드", expanded=False):
+                st.markdown("""
+                ### 데이터 증강 옵션 설정 가이드
+                
+                #### 1. SMOTE (Synthetic Minority Over-sampling Technique)
+                - **생성할 샘플 수 (10-100)**
+                  - 권장값: 50
+                  - 너무 많은 샘플 생성 시 과적합 위험
+                  - 너무 적은 샘플은 효과가 미미
+                  - 데이터 크기의 20-50% 정도가 적절
+                
+                #### 2. 가우시안 노이즈
+                - **노이즈 수준 (0.01-0.1)**
+                  - 권장값: 0.05
+                  - 0.01: 미세한 변화만 추가
+                  - 0.05: 중간 정도의 변화
+                  - 0.1: 큰 변화 추가
+                  - 데이터의 표준편차의 5-10% 정도가 적절
+                
+                - **생성할 샘플 수 (10-100)**
+                  - 권장값: 50
+                  - 노이즈 수준과 함께 고려
+                  - 높은 노이즈 수준에서는 적은 샘플 수 권장
+                
+                #### 3. 선형 보간
+                - **보간 샘플 수 (10-100)**
+                  - 권장값: 50
+                  - 데이터 포인트 간의 간격을 고려
+                  - 너무 많은 샘플은 원본 데이터의 특성을 왜곡할 수 있음""")
+                  
+            with st.expander("💡 옵션 선택 시 고려사항", expanded=False):
+                st.markdown("""
+                ### 데이터 증강 옵션 이해하기
+                
+                1. **데이터의 특성**
+                   - 데이터가 부족한 경우: SMOTE 권장
+                   - 데이터가 불안정한 경우: 가우시안 노이즈 권장
+                   - 데이터가 연속적인 경우: 선형 보간 권장
+                
+                2. **모델의 성능**
+                   - 과적합 발생 시: 샘플 수 감소 또는 노이즈 수준 감소
+                   - 과소적합 발생 시: 샘플 수 증가 또는 노이즈 수준 증가
+                
+                3. **데이터의 분포**
+                   - 균형잡힌 분포: 선형 보간 권장
+                   - 불균형한 분포: SMOTE 권장
+                   - 노이즈가 많은 분포: 가우시안 노이즈 권장
+                """)
+ 
+
+            # 데이터 증강 옵션 추가
+            data_augmentation_options = st.expander("데이터 증강 옵션", expanded=True)
+            with data_augmentation_options:
+                apply_augmentation = st.checkbox("데이터 증강 적용", value=False,
+                                               help="데이터 증강을 통해 학습 데이터를 늘립니다.")
+                
+                if apply_augmentation:
+                    augmentation_method = st.radio(
+                        "증강 방법:",
+                        ["SMOTE", "가우시안 노이즈", "선형 보간"],
+                        horizontal=True,
+                        help="SMOTE: 소수 클래스의 샘플을 보간하여 증강\n가우시안 노이즈: 기존 데이터에 노이즈를 추가\n선형 보간: 기존 데이터 포인트 사이를 보간"
+                    )
+                    
+                    if augmentation_method == "SMOTE":
+                        # SMOTE는 분류 문제에 주로 사용되므로, 회귀 문제에 맞게 수정
+                        st.info("SMOTE는 분류 문제에 주로 사용되지만, 회귀 문제에도 적용할 수 있습니다.")
+                        st.warning("SMOTE는 원본 데이터의 최대 2배까지만 증강이 가능합니다.")
+                        smote_samples = st.slider("생성할 샘플 수", 
+                                                min_value=10, max_value=len(data)*2, value=50, step=10,
+                                                help="생성할 샘플 수를 선택하세요. 원본 데이터의 2배를 초과할 수 없습니다.")
+                    
+                    elif augmentation_method == "가우시안 노이즈":
+                        noise_level = st.slider("노이즈 수준", 
+                                              min_value=0.01, max_value=0.1, value=0.05, step=0.01,
+                                              help="추가할 노이즈의 표준편차를 선택하세요.")
+                        noise_samples = st.slider("생성할 샘플 수", 
+                                                min_value=10, max_value=300, value=50, step=10,
+                                                help="생성할 샘플 수를 선택하세요. 최대 300개까지 가능합니다.")
+                    
+                    else:  # 선형 보간
+                        interpolation_samples = st.slider("보간 샘플 수", 
+                                                        min_value=10, max_value=300, value=50, step=10,
+                                                        help="기존 데이터 포인트 사이에 생성할 샘플 수를 선택하세요. 최대 300개까지 가능합니다.")
             
             # 이상치 처리 옵션
             outlier_options = st.expander("이상치 처리 옵션", expanded=True)
@@ -408,7 +813,7 @@ if data is not None:
             if st.button("모델 훈련"):
                 with st.spinner("모델 훈련 중..."):
                     # 원본 데이터 보존
-                    X_orig = correlation_data[top_indices].copy()
+                    X_orig = correlation_data[selected_indices].copy()
                     y_orig = correlation_data[target_col].copy()
                     
                     # 이상치 확인 및 시각화
@@ -482,6 +887,149 @@ if data is not None:
                         X_cleaned = X_orig.copy()
                         y_cleaned = y_orig.copy()
                     
+                    # 데이터 증강 적용
+                    if apply_augmentation:
+                        # 데이터 증강 전 데이터 건수
+                        before_aug_count = len(X_cleaned)
+                        
+                        # 데이터 증강 방법에 따라 적용
+                        if augmentation_method == "SMOTE":
+                            # SMOTE는 분류 문제에 주로 사용되므로, 회귀 문제에 맞게 수정
+                            from sklearn.neighbors import NearestNeighbors
+                            
+                            # 데이터 증강을 위한 함수
+                            def smote_for_regression(X, y, n_samples):
+                                # 데이터 증강을 위한 결과 저장
+                                X_aug = X.copy()
+                                y_aug = y.copy()
+                                
+                                # 타겟 변수를 구간으로 나누어 각 구간별로 샘플링
+                                y_bins = pd.qcut(y, q=5, labels=False)
+                                
+                                # 각 구간별로 SMOTE 적용
+                                for i in range(5):
+                                    # 현재 구간의 인덱스
+                                    current_indices = np.where(y_bins == i)[0]
+                                    
+                                    if len(current_indices) < 2:
+                                        continue
+                                    
+                                    # 현재 구간의 데이터
+                                    X_current = X.iloc[current_indices]
+                                    y_current = y.iloc[current_indices]
+                                    
+                                    # k-최근접 이웃 찾기
+                                    nbrs = NearestNeighbors(n_neighbors=2).fit(X_current)
+                                    distances, indices = nbrs.kneighbors(X_current)
+                                    
+                                    # 각 샘플에 대해 보간
+                                    for j in range(min(n_samples // 5, len(current_indices))):
+                                        # 랜덤하게 두 이웃 선택
+                                        idx = np.random.randint(0, len(current_indices))
+                                        neighbor_idx = indices[idx, 1]
+                                        
+                                        # 보간 계수
+                                        alpha = np.random.random()
+                                        
+                                        # 보간된 샘플 생성
+                                        X_interp = X_current.iloc[idx] * (1 - alpha) + X_current.iloc[neighbor_idx] * alpha
+                                        y_interp = y_current.iloc[idx] * (1 - alpha) + y_current.iloc[neighbor_idx] * alpha
+                                        
+                                        # 증강된 데이터 추가
+                                        X_aug = pd.concat([X_aug, pd.DataFrame([X_interp], columns=X.columns)], ignore_index=True)
+                                        y_aug = pd.concat([y_aug, pd.Series([y_interp], name=y.name)], ignore_index=True)
+                                
+                                return X_aug, y_aug
+                            
+                            # SMOTE 적용
+                            X_aug, y_aug = smote_for_regression(X_cleaned, y_cleaned, smote_samples)
+                            
+                            # 증강된 데이터 수 계산
+                            aug_count = len(X_aug) - before_aug_count
+                            aug_percentage = (aug_count / before_aug_count) * 100
+                            
+                            st.success(f"SMOTE를 통해 {aug_count}개({aug_percentage:.1f}%)의 샘플을 증강했습니다. (원본: {before_aug_count}개 → 증강: {len(X_aug)}개)")
+                            
+                            # 증강된 데이터 사용
+                            X_cleaned = X_aug
+                            y_cleaned = y_aug
+                            
+                            # 증강 결과 시각화 함수 호출
+                            display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method)
+                            
+                        elif augmentation_method == "가우시안 노이즈":
+                            # 가우시안 노이즈 추가
+                            X_aug = X_cleaned.copy()
+                            y_aug = y_cleaned.copy()
+                            
+                            for _ in range(noise_samples):
+                                # 랜덤하게 원본 데이터 선택
+                                idx = np.random.randint(0, len(X_cleaned))
+                                
+                                # 가우시안 노이즈 생성
+                                X_noise = X_cleaned.iloc[idx] + np.random.normal(0, noise_level, size=len(X_cleaned.columns))
+                                y_noise = y_cleaned.iloc[idx] + np.random.normal(0, noise_level)
+                                
+                                # 증강된 데이터 추가
+                                X_aug = pd.concat([X_aug, pd.DataFrame([X_noise], columns=X_cleaned.columns)], ignore_index=True)
+                                y_aug = pd.concat([y_aug, pd.Series([y_noise], name=y_cleaned.name)], ignore_index=True)
+                            
+                            # 증강된 데이터 수 계산
+                            aug_count = len(X_aug) - before_aug_count
+                            aug_percentage = (aug_count / before_aug_count) * 100
+                            
+                            st.success(f"가우시안 노이즈를 통해 {aug_count}개({aug_percentage:.1f}%)의 샘플을 증강했습니다. (원본: {before_aug_count}개 → 증강: {len(X_aug)}개)")
+                            
+                            # 증강된 데이터 사용
+                            X_cleaned = X_aug
+                            y_cleaned = y_aug
+                            # 증강 결과 시각화 함수 호출
+                            display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method)
+                            
+                        else:  # 선형 보간
+                            # 선형 보간
+                            X_aug = X_cleaned.copy()
+                            y_aug = y_cleaned.copy()
+                            
+                            # 데이터 포인트 쌍 생성
+                            pairs = []
+                            for i in range(len(X_cleaned)):
+                                for j in range(i+1, len(X_cleaned)):
+                                    pairs.append((i, j))
+                            
+                            # 랜덤하게 쌍 선택
+                            if len(pairs) > interpolation_samples:
+                                selected_pairs = np.random.choice(len(pairs), interpolation_samples, replace=False)
+                            else:
+                                selected_pairs = np.arange(len(pairs))
+                            
+                            # 선택된 쌍에 대해 보간
+                            for pair_idx in selected_pairs:
+                                i, j = pairs[pair_idx]
+                                
+                                # 보간 계수
+                                alpha = np.random.random()
+                                
+                                # 보간된 샘플 생성
+                                X_interp = X_cleaned.iloc[i] * (1 - alpha) + X_cleaned.iloc[j] * alpha
+                                y_interp = y_cleaned.iloc[i] * (1 - alpha) + y_cleaned.iloc[j] * alpha
+                                
+                                # 증강된 데이터 추가
+                                X_aug = pd.concat([X_aug, pd.DataFrame([X_interp], columns=X_cleaned.columns)], ignore_index=True)
+                                y_aug = pd.concat([y_aug, pd.Series([y_interp], name=y_cleaned.name)], ignore_index=True)
+                            
+                            # 증강된 데이터 수 계산
+                            aug_count = len(X_aug) - before_aug_count
+                            aug_percentage = (aug_count / before_aug_count) * 100
+                            
+                            st.success(f"선형 보간을 통해 {aug_count}개({aug_percentage:.1f}%)의 샘플을 증강했습니다. (원본: {before_aug_count}개 → 증강: {len(X_aug)}개)")
+                            
+                            # 증강된 데이터 사용
+                            X_cleaned = X_aug
+                            y_cleaned = y_aug
+                            # 증강 결과 시각화 함수 호출
+                            display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method)
+                    
                     # 데이터 부족 시 경고
                     if len(X_cleaned) < 20:
                         st.warning("데이터가 너무 적습니다(20개 미만). 모델 성능이 좋지 않을 수 있습니다.")
@@ -522,14 +1070,92 @@ if data is not None:
                     
                     # 모델 훈련
                     if model_type == "RandomForest":
-                        model = RandomForestRegressor(n_estimators=100, random_state=42)
+                        if tune_hyperparams:
+                            # 하이퍼파라미터 튜닝
+                            from sklearn.model_selection import RandomizedSearchCV
+                            
+                            # 파라미터 그리드 정의
+                            param_dist = {
+                                'n_estimators': [50, 100, 200, 300, 500],
+                                'max_depth': [None, 10, 20, 30, 40, 50],
+                                'min_samples_split': [2, 5, 10],
+                                'min_samples_leaf': [1, 2, 4]
+                            }
+                            
+                            # 기본 모델
+                            base_model = RandomForestRegressor(random_state=42)
+                            
+                            # RandomizedSearchCV 설정
+                            random_search = RandomizedSearchCV(
+                                estimator=base_model,
+                                param_distributions=param_dist,
+                                n_iter=20,  # 시도할 파라미터 조합 수
+                                scoring='neg_mean_squared_error',
+                                cv=5,  # 5-fold 교차 검증
+                                verbose=0,
+                                random_state=42,
+                                n_jobs=-1  # 모든 CPU 코어 사용
+                            )
+                            
+                            # 하이퍼파라미터 튜닝 실행
+                            with st.spinner("하이퍼파라미터 튜닝 중..."):
+                                random_search.fit(X_train, y_train)
+                            
+                            # 최적 파라미터 출력
+                            st.success(f"최적 하이퍼파라미터: {random_search.best_params_}")
+                            
+                            # 최적 모델 선택
+                            model = random_search.best_estimator_
+                        else:
+                            model = RandomForestRegressor(n_estimators=100, random_state=42)
+                            model.fit(X_train, y_train)
+                            
                     elif model_type == "XGBoost":
-                        model = xgb.XGBRegressor(n_estimators=100, random_state=42)
+                        if tune_hyperparams:
+                            # 하이퍼파라미터 튜닝
+                            from sklearn.model_selection import RandomizedSearchCV
+                            
+                            # 파라미터 그리드 정의
+                            param_dist = {
+                                'n_estimators': [50, 100, 200, 300, 500],
+                                'max_depth': [3, 5, 7, 9, 11],
+                                'learning_rate': [0.01, 0.05, 0.1, 0.2],
+                                'subsample': [0.6, 0.8, 1.0],
+                                'colsample_bytree': [0.6, 0.8, 1.0]
+                            }
+                            
+                            # 기본 모델
+                            base_model = xgb.XGBRegressor(random_state=42)
+                            
+                            # RandomizedSearchCV 설정
+                            random_search = RandomizedSearchCV(
+                                estimator=base_model,
+                                param_distributions=param_dist,
+                                n_iter=20,  # 시도할 파라미터 조합 수
+                                scoring='neg_mean_squared_error',
+                                cv=5,  # 5-fold 교차 검증
+                                verbose=0,
+                                random_state=42,
+                                n_jobs=-1  # 모든 CPU 코어 사용
+                            )
+                            
+                            # 하이퍼파라미터 튜닝 실행
+                            with st.spinner("하이퍼파라미터 튜닝 중..."):
+                                random_search.fit(X_train, y_train)
+                            
+                            # 최적 파라미터 출력
+                            st.success(f"최적 하이퍼파라미터: {random_search.best_params_}")
+                            
+                            # 최적 모델 선택
+                            model = random_search.best_estimator_
+                        else:
+                            model = xgb.XGBRegressor(n_estimators=100, random_state=42)
+                            model.fit(X_train, y_train)
+                            
                     else:  # 선형 회귀
                         from sklearn.linear_model import LinearRegression
                         model = LinearRegression()
-                    
-                    model.fit(X_train, y_train)
+                        model.fit(X_train, y_train)
                     
                     # 모델 평가
                     y_pred = model.predict(X_test)
@@ -832,7 +1458,7 @@ if data is not None:
                     
                     # 모델 및 특성 저장
                     st.session_state.model = model
-                    st.session_state.model_features = top_indices.tolist()
+                    st.session_state.model_features = selected_indices.tolist()
                     st.session_state.remove_outliers = remove_outliers
                     st.session_state.apply_scaling = apply_scaling
                     st.session_state.model_type = model_type
@@ -969,11 +1595,63 @@ if data is not None:
                     
                     # 모델 훈련 완료 메시지와 시뮬레이션 버튼
                     st.success("모델 훈련이 완료되었습니다!")
+                    
+                    # 모델 ID 생성 및 정보 저장
+                    st.session_state.model_id += 1
+                    current_model_id = f"모델-{st.session_state.model_id}"
+                    
+                    # 모델 정보 저장
+                    st.session_state.model_info = {
+                        'id': current_model_id,
+                        'type': model_type,
+                        'features': len(st.session_state.model_features),
+                        'target': target_col,
+                        'r2_score': r2,
+                        'created_time': datetime.now().strftime("%Y-%m-%d %H:%M")
+                    }
+                    
+                    # 모델 정보 표시
+                    st.info(f"📊 **{current_model_id}**가 생성되었습니다! (유형: {model_type}, R² 점수: {r2:.4f})")
+                    
+                    # 시뮬레이션 안내 메시지 추가
+                    st.info("✅ 이제 상단의 '시뮬레이션' 탭을 클릭하여 학습된 모델로 다양한 시나리오를 시뮬레이션해 볼 수 있습니다.")
         
-        with tab2:
+        else:  # 시뮬레이션 탭
             st.write("### 시뮬레이션")
             
-            if 'model' in st.session_state and 'model_features' in st.session_state:
+            # 모델 훈련 여부 확인
+            if 'model' not in st.session_state or 'model_features' not in st.session_state:
+                st.warning("⚠️ 먼저 모델 훈련을 완료해야 합니다.")
+                st.info("상단의 '모델 훈련' 탭으로 이동하여 데이터를 업로드하고 모델을 훈련시켜주세요.")
+                
+                # 모델 훈련 탭으로 이동하는 버튼 삭제하고 문구로만 안내
+                st.markdown("👆 **상단의 '모델 훈련' 탭을 클릭해주세요!**")
+            
+            else:
+                # 현재 사용 중인 모델 정보 표시
+                if 'model_info' in st.session_state:
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col1:
+                        st.write("")
+                    with col2:
+                        st.markdown(
+                            f"""
+                            <div style="background-color:#f0f7fb; padding:10px; border-radius:5px; border-left:5px solid #4b8bf4;">
+                                <h4 style="margin:0;">📊 현재 사용 중인 모델</h4>
+                                <p><b>ID:</b> {st.session_state.model_info['id']}</p>
+                                <p><b>모델 유형:</b> {st.session_state.model_info['type']}</p>
+                                <p><b>결과변수:</b> {st.session_state.model_info['target']}</p>
+                                <p><b>원인변수 수:</b> {st.session_state.model_info['features']}개</p>
+                                <p><b>R² 점수:</b> {st.session_state.model_info['r2_score']:.4f}</p>
+                                <p><b>생성 시간:</b> {st.session_state.model_info['created_time']}</p>
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
+                    with col3:
+                        st.write("")
+                
+                # 여기서부터 기존 시뮬레이션 탭 내용
                 # 시뮬레이션 모드 선택
                 simulation_mode = st.radio(
                     "시뮬레이션 모드:",
@@ -981,8 +1659,12 @@ if data is not None:
                     horizontal=True
                 )
                 
+                # 수동 시뮬레이션 부분 수정 - 슬라이더 생성
                 if simulation_mode == "수동 시뮬레이션":
                     st.write("아래 변수들의 값을 조정하여 예측해보세요:")
+                    
+                    # 선택한 원인변수에 대한 안내 문구 추가
+                    st.write(f"**선택한 {len(st.session_state.model_features)}개 원인변수에 대한 값을 조정해보세요:**")
                     
                     # 입력 위젯 생성
                     input_values = {}
@@ -1023,7 +1705,7 @@ if data is not None:
                             st.session_state.target_mean = numeric_data[target_col].mean()
                             st.session_state.target_min = numeric_data[target_col].min()
                             st.session_state.target_max = numeric_data[target_col].max()
-                
+
                 else:  # 최적화 시뮬레이션
                     st.write("### 최적화 시뮬레이션")
                     st.write("목표값을 설정하고 최적의 변수 조합을 찾아보세요.")
@@ -1071,10 +1753,36 @@ if data is not None:
                         - 시도 횟수를 늘리면 더 좋은 결과를 얻을 수 있음
                         - 변수의 범위를 적절히 설정하는 것이 중요
                         - 목표값에 도달하지 못할 경우 범위 조정 필요
+                        
+                        #### 5. 최적 범위 분석의 의미
+                        
+                        이 시스템에서는 단일 최적점만 찾는 것이 아니라 **최적 범위**도 함께 제공합니다:
+                        
+                        - **최적 범위란?** 목표값에 가장 가까운 상위 10개 결과에서 각 변수가 가지는 값의 범위입니다.
+                        
+                        - **실무적 가치:**
+                          - **운영 유연성**: 정확히 특정 값이 아닌, 허용 가능한 범위 내에서 운영 가능
+                          - **안정성**: 여러 가지 좋은 설정값 옵션을 제공하여 현장 상황에 맞게 선택 가능
+                          - **통찰력**: 각 변수가 얼마나 민감한지(좁은 범위) 또는 유연한지(넓은 범위) 파악 가능
+                        
+                        - **해석 방법:**
+                          - **좁은 최적 범위**: 해당 변수는 매우 정밀하게 제어해야 함을 의미
+                          - **넓은 최적 범위**: 해당 변수는 다양한 값에서도 좋은 결과를 얻을 수 있음
+                          - **범위 축소율**: 원래 설정한 범위에서 얼마나 좁아졌는지 보여주는 지표
+                          - **겹침 비율**: 초기 설정 범위가 얼마나 적절했는지 보여주는 지표
+                        
+                        - **활용 전략:**
+                          - 핵심 변수(좁은 범위): 정밀 모니터링 및 제어 시스템 강화
+                          - 유연한 변수(넓은 범위): 다른 제약조건에 따라 조정 가능한 여유 변수로 활용
+                          - 최적 범위를 기반으로 실제 공정 설정값 결정 시 현장 여건 반영
+                        
+                        랜덤 서치와 최적 범위 분석을 결합함으로써, 이론적으로 완벽한 단일 값보다 현실에서 실제로 적용 가능한 실용적인 솔루션을 제공합니다.
                         """)
                     
-                    # 최적화 범위 설정
+                    # 최적화 범위 설정에 설명 추가
                     st.write("#### 변수 범위 설정")
+                    st.write(f"**선택한 {len(st.session_state.model_features)}개 원인변수에 대한 범위를 설정하세요:**")
+                    
                     variable_ranges = {}
                     
                     for feature in st.session_state.model_features:
@@ -1117,6 +1825,9 @@ if data is not None:
                             progress_bar = st.progress(0)
                             status_text = st.empty()
                             
+                            # 랜덤 서치 결과 저장을 위한 리스트
+                            all_results = []
+                            
                             # 랜덤 서치 수행
                             for i in range(n_iterations):
                                 # 진행 상황 업데이트
@@ -1144,6 +1855,14 @@ if data is not None:
                                 # 목표값과의 차이 계산
                                 diff = abs(prediction - target_value)
                                 
+                                # 결과 저장
+                                result = {
+                                    'inputs': current_input.copy(),
+                                    'prediction': prediction,
+                                    'diff': diff
+                                }
+                                all_results.append(result)
+                                
                                 # 최적 조합 업데이트
                                 if diff < min_diff:
                                     min_diff = diff
@@ -1154,9 +1873,15 @@ if data is not None:
                             progress_bar.progress(1.0)
                             status_text.text("최적화 완료!")
                             
+                            # 상위 N개 결과 선택 (타겟값에 가까운 결과)
+                            top_n = 10  # 상위 10개 결과
+                            all_results.sort(key=lambda x: x['diff'])
+                            top_results = all_results[:top_n]
+                            
                             # 최적화 결과 저장
                             st.session_state.last_prediction = best_prediction
                             st.session_state.last_input_values = best_input_values
+                            st.session_state.top_results = top_results
                             
                             # 타겟 통계 정보 저장
                             st.session_state.target_mean = numeric_data[target_col].mean()
@@ -1191,6 +1916,130 @@ if data is not None:
                         '값': list(st.session_state.last_input_values.values())
                     })
                     st.dataframe(optimal_values_df, use_container_width=True)
+                    
+                    # 최적화 모드에서 상위 결과 범위 시각화
+                    if simulation_mode == "최적화 시뮬레이션" and 'top_results' in st.session_state:
+                        st.write("### 최적값 범위 분석")
+                        st.write("목표값에 가까운 상위 10개 결과의 변수 범위입니다.")
+                        
+                        # 상위 결과에서 각 변수의 범위 계산
+                        optimal_ranges = {}
+                        for feature in st.session_state.model_features:
+                            if feature in st.session_state.last_input_values:
+                                values = [result['inputs'][feature] for result in st.session_state.top_results]
+                                optimal_ranges[feature] = {
+                                    'min': min(values),
+                                    'max': max(values),
+                                    'mean': sum(values) / len(values)
+                                }
+                        
+                        # 각 변수별로 설정 범위와 최적 범위 비교 그래프 생성
+                        for feature in optimal_ranges:
+                            st.write(f"#### {feature}")
+                            
+                            # 데이터 준비
+                            user_min = variable_ranges[feature]['min']
+                            user_max = variable_ranges[feature]['max']
+                            opt_min = optimal_ranges[feature]['min']
+                            opt_max = optimal_ranges[feature]['max']
+                            opt_mean = optimal_ranges[feature]['mean']
+                            
+                            # 그래프 생성
+                            fig = go.Figure()
+                            
+                            # 사용자 설정 범위
+                            fig.add_trace(go.Scatter(
+                                x=[user_min, user_max],
+                                y=['설정 범위', '설정 범위'],
+                                mode='markers',
+                                marker=dict(size=10, color='blue'),
+                                name='설정 범위'
+                            ))
+                            
+                            # 사용자 설정 범위를 선으로 연결
+                            fig.add_trace(go.Scatter(
+                                x=[user_min, user_max],
+                                y=['설정 범위', '설정 범위'],
+                                mode='lines',
+                                line=dict(width=2, color='blue'),
+                                showlegend=False
+                            ))
+                            
+                            # 최적 범위
+                            fig.add_trace(go.Scatter(
+                                x=[opt_min, opt_max],
+                                y=['최적 범위', '최적 범위'],
+                                mode='markers',
+                                marker=dict(size=10, color='red'),
+                                name='최적 범위'
+                            ))
+                            
+                            # 최적 범위를 선으로 연결
+                            fig.add_trace(go.Scatter(
+                                x=[opt_min, opt_max],
+                                y=['최적 범위', '최적 범위'],
+                                mode='lines',
+                                line=dict(width=2, color='red'),
+                                showlegend=False
+                            ))
+                            
+                            # 최적 평균값
+                            fig.add_trace(go.Scatter(
+                                x=[opt_mean],
+                                y=['최적 범위'],
+                                mode='markers',
+                                marker=dict(size=12, color='green', symbol='star'),
+                                name='최적 평균값'
+                            ))
+                            
+                            # 현재 최적값
+                            current_optimal = st.session_state.last_input_values[feature]
+                            fig.add_trace(go.Scatter(
+                                x=[current_optimal],
+                                y=['최적 범위'],
+                                mode='markers',
+                                marker=dict(size=14, color='gold', symbol='diamond'),
+                                name='최적값'
+                            ))
+                            
+                            # 레이아웃 설정
+                            fig.update_layout(
+                                title=f'{feature} 최적 범위 분석',
+                                xaxis_title=f'{feature} 값',
+                                yaxis=dict(
+                                    showticklabels=True,
+                                    tickmode='array',
+                                    tickvals=['설정 범위', '최적 범위'],
+                                    ticktext=['설정 범위', '최적 범위']
+                                ),
+                                height=300,
+                                margin=dict(l=20, r=20, t=50, b=30),
+                                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+                            )
+                            
+                            # 차이 백분율 계산
+                            user_range_size = user_max - user_min
+                            opt_range_size = opt_max - opt_min
+                            range_diff_pct = (1 - opt_range_size / user_range_size) * 100 if user_range_size > 0 else 0
+                            
+                            # 설명 텍스트 추가
+                            overlap = max(0, min(user_max, opt_max) - max(user_min, opt_min))
+                            overlap_pct = (overlap / user_range_size) * 100 if user_range_size > 0 else 0
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("설정 범위", f"{user_min:.4f} ~ {user_max:.4f}")
+                                st.metric("최적 범위", f"{opt_min:.4f} ~ {opt_max:.4f}")
+                            
+                            with col2:
+                                st.metric("범위 축소율", f"{range_diff_pct:.1f}%", 
+                                         f"{range_diff_pct:.1f}%" if range_diff_pct > 0 else f"{range_diff_pct:.1f}%")
+                                st.metric("설정 범위와 겹침", f"{overlap_pct:.1f}%")
+                                
+                            # 그래프 출력
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            st.write("---")
 
                     # 원인 분석 그래프 추가
                     st.write("### 원인 분석")
@@ -1362,10 +2211,8 @@ if data is not None:
                             }).background_gradient(cmap='RdYlBu_r', subset=['차이(%)']),
                             use_container_width=True
                         )
-            else:
-                st.info("먼저 모델을 훈련해주세요.")
     else:
-        st.error(f"타깃 변수 '{target_col}'을 찾을 수 없습니다.")
+        st.info("먼저 모델을 훈련해주세요.")
 else:
     st.info("시뮬레이션을 시작하려면 CSV 파일을 업로드해주세요.") 
 
