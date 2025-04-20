@@ -17,7 +17,7 @@ import traceback
 from scipy import stats
 import itertools
 from datetime import datetime
-
+import base64
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
@@ -38,6 +38,216 @@ def display_plotly_centered(fig, width_pct=60):
     cols = st.columns([left_margin, width_pct, right_margin])
     with cols[1]:
         st.plotly_chart(fig, use_container_width=True)
+        
+# 데이터 증강 결과를 보여주는 함수
+def display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method):
+    """
+    데이터 증강 결과를 시각화하고 다운로드 옵션을 제공하는 함수
+    
+    Parameters:
+    -----------
+    X_orig : DataFrame
+        원본 특성 데이터
+    y_orig : Series
+        원본 타겟 데이터
+    X_aug : DataFrame
+        증강된 특성 데이터
+    y_aug : Series
+        증강된 타겟 데이터
+    augmentation_method : str
+        사용된 데이터 증강 방법
+    """
+    # 증강 결과 시각화를 위한 데이터 저장
+    st.session_state.augmented_data = {
+        'X_original': X_orig,
+        'y_original': y_orig,
+        'X_augmented': X_aug,
+        'y_augmented': y_aug,
+        'augmentation_method': augmentation_method
+    }
+    
+    # 증강 결과 시각화 섹션
+    with st.expander("📊 데이터 증강 결과 분석", expanded=False):
+        st.write("### 데이터 증강 결과 분석")
+        
+        # 각 변수별로 분석
+        for col in X_orig.columns:
+            st.write(f"#### {col} 변수 분석")
+            
+            # 두 열로 레이아웃 분할
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # 히스토그램 생성
+                fig = go.Figure()
+                
+                # 원본 데이터 히스토그램 (파란색)
+                fig.add_trace(go.Histogram(
+                    x=X_orig[col],
+                    name='원본 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='blue'
+                ))
+                
+                # 증강 데이터 히스토그램 (빨간색)
+                fig.add_trace(go.Histogram(
+                    x=X_aug[col],
+                    name='증강 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='red'
+                ))
+                
+                # 레이아웃 설정
+                fig.update_layout(
+                    title=f'{col} 분포 비교',
+                    xaxis_title='값',
+                    yaxis_title='빈도',
+                    barmode='overlay',
+                    height=300,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # 통계치 비교 테이블 생성
+                stats_comparison = pd.DataFrame({
+                    '통계치': ['평균', '표준편차', '최소값', '최대값', '중앙값'],
+                    '원본 데이터': [
+                        X_orig[col].mean(),
+                        X_orig[col].std(),
+                        X_orig[col].min(),
+                        X_orig[col].max(),
+                        X_orig[col].median()
+                    ],
+                    '증강 데이터': [
+                        X_aug[col].mean(),
+                        X_aug[col].std(),
+                        X_aug[col].min(),
+                        X_aug[col].max(),
+                        X_aug[col].median()
+                    ]
+                })
+                
+                # 통계치 포맷팅
+                stats_comparison['원본 데이터'] = stats_comparison['원본 데이터'].round(4)
+                stats_comparison['증강 데이터'] = stats_comparison['증강 데이터'].round(4)
+                
+                # 차이 계산
+                stats_comparison['차이'] = (stats_comparison['증강 데이터'] - stats_comparison['원본 데이터']).round(4)
+                
+                st.dataframe(stats_comparison, use_container_width=True)
+        
+        # 결과 변수 분석 추가
+        if y_orig.name:
+            st.write(f"#### {y_orig.name} (결과 변수) 분석")
+            
+            # 두 열로 레이아웃 분할
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # 히스토그램 생성
+                fig = go.Figure()
+                
+                # 원본 데이터 히스토그램 (파란색)
+                fig.add_trace(go.Histogram(
+                    x=y_orig,
+                    name='원본 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='blue'
+                ))
+                
+                # 증강 데이터 히스토그램 (빨간색)
+                fig.add_trace(go.Histogram(
+                    x=y_aug,
+                    name='증강 데이터',
+                    opacity=0.7,
+                    nbinsx=30,
+                    marker_color='red'
+                ))
+                
+                # 레이아웃 설정
+                fig.update_layout(
+                    title=f'{y_orig.name} 분포 비교',
+                    xaxis_title='값',
+                    yaxis_title='빈도',
+                    barmode='overlay',
+                    height=300,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # 통계치 비교 테이블 생성
+                stats_comparison = pd.DataFrame({
+                    '통계치': ['평균', '표준편차', '최소값', '최대값', '중앙값'],
+                    '원본 데이터': [
+                        y_orig.mean(),
+                        y_orig.std(),
+                        y_orig.min(),
+                        y_orig.max(),
+                        y_orig.median()
+                    ],
+                    '증강 데이터': [
+                        y_aug.mean(),
+                        y_aug.std(),
+                        y_aug.min(),
+                        y_aug.max(),
+                        y_aug.median()
+                    ]
+                })
+                
+                # 통계치 포맷팅
+                stats_comparison['원본 데이터'] = stats_comparison['원본 데이터'].round(4)
+                stats_comparison['증강 데이터'] = stats_comparison['증강 데이터'].round(4)
+                
+                # 차이 계산
+                stats_comparison['차이'] = (stats_comparison['증강 데이터'] - stats_comparison['원본 데이터']).round(4)
+                
+                st.dataframe(stats_comparison, use_container_width=True)
+    
+    # 증강 데이터 다운로드 버튼 (섹션 밖에 배치)
+    st.write("#### 증강 데이터 다운로드")
+    
+    # 원본 데이터와 증강 데이터 구분을 위한 열 추가
+    # 원본 데이터에 '데이터_유형' 열 추가
+    X_orig_with_type = X_orig.copy()
+    X_orig_with_type['데이터_유형'] = '원본'
+    
+    # 증강 데이터에 '데이터_유형' 열 추가
+    X_aug_with_type = X_aug.copy()
+    X_aug_with_type['데이터_유형'] = '가상'
+    
+    # 원본 데이터와 증강 데이터 합치기
+    combined_df = pd.concat([X_orig_with_type, X_aug_with_type], axis=0)
+    
+    # 타겟 변수 추가 (결과 변수 이름 확인)
+    target_name = y_orig.name if y_orig.name else 'target'
+    combined_df[target_name] = pd.concat([y_orig, y_aug], axis=0).values
+    
+    # 증강 데이터를 CSV로 변환 (한글 깨짐 방지)
+    csv = combined_df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+    
+    # 다운로드 링크 생성
+    b64 = base64.b64encode(csv).decode('utf-8-sig')
+    href = f'<a href="data:file/csv;charset=utf-8-sig;base64,{b64}" download="augmented_data.csv">증강 데이터 다운로드 (CSV)</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
 # 탭 선택을 위한 세션 상태 초기화
 if 'active_tab' not in st.session_state:
@@ -475,7 +685,7 @@ if data is not None:
  
 
             # 데이터 증강 옵션 추가
-            data_augmentation_options = st.expander("데이터 증강 옵션", expanded=False)
+            data_augmentation_options = st.expander("데이터 증강 옵션", expanded=True)
             with data_augmentation_options:
                 apply_augmentation = st.checkbox("데이터 증강 적용", value=False,
                                                help="데이터 증강을 통해 학습 데이터를 늘립니다.")
@@ -690,6 +900,9 @@ if data is not None:
                             X_cleaned = X_aug
                             y_cleaned = y_aug
                             
+                            # 증강 결과 시각화 함수 호출
+                            display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method)
+                            
                         elif augmentation_method == "가우시안 노이즈":
                             # 가우시안 노이즈 추가
                             X_aug = X_cleaned.copy()
@@ -716,6 +929,8 @@ if data is not None:
                             # 증강된 데이터 사용
                             X_cleaned = X_aug
                             y_cleaned = y_aug
+                            # 증강 결과 시각화 함수 호출
+                            display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method)
                             
                         else:  # 선형 보간
                             # 선형 보간
@@ -758,6 +973,8 @@ if data is not None:
                             # 증강된 데이터 사용
                             X_cleaned = X_aug
                             y_cleaned = y_aug
+                            # 증강 결과 시각화 함수 호출
+                            display_augmentation_results(X_orig, y_orig, X_aug, y_aug, augmentation_method)
                     
                     # 데이터 부족 시 경고
                     if len(X_cleaned) < 20:
