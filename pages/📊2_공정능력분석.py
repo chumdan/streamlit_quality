@@ -618,10 +618,17 @@ if 'data' in st.session_state and st.session_state.data is not None:
             if std_val > 0:
                 # 정규성을 만족하는 경우의 공정능력지수
                 if normality_result == "정규 분포 (p >= 0.05)":
+                    # 단기 공정능력지수 (Cp, Cpk)
                     cp = (usl - lsl) / (6 * std_val)
                     cpu = (usl - mean_val) / (3 * std_val)
                     cpl = (mean_val - lsl) / (3 * std_val)
                     cpk = min(cpu, cpl)
+                    
+                    # 장기 공정능력지수 (Pp, Ppk) - 전체 표준편차 사용
+                    pp = (usl - lsl) / (6 * var_data_original.std())
+                    ppu = (usl - mean_val) / (3 * var_data_original.std())
+                    ppl = (mean_val - lsl) / (3 * var_data_original.std())
+                    ppk = min(ppu, ppl)
                     
                     # 규격 내 제품 비율(합격률) 계산
                     z_usl = (usl - mean_val) / std_val
@@ -637,7 +644,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     defect_rate_ppm = (1 - (prob_below_usl - prob_above_lsl)) * 1000000
                     
                     # 계산 방법 표시
-                    method_used = "정규분포 가정"
+                    method_used = "정규분포 가정 (단기/장기 구분)"
                     
                 # 정규성을 만족하지 않는 경우의 비모수적 공정능력지수
                 else:
@@ -646,11 +653,21 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     p00135 = np.percentile(var_data, 0.135)
                     p50 = np.percentile(var_data, 50)  # 중앙값
                     
-                    # 비모수적 공정능력지수 계산
+                    # 비모수적 공정능력지수 계산 (단기)
                     pp = (usl - lsl) / (p99865 - p00135)
                     ppu = (usl - p50) / (p99865 - p50)
                     ppl = (p50 - lsl) / (p50 - p00135)
                     ppk = min(ppu, ppl)
+                    
+                    # 장기 공정능력지수는 전체 데이터로 계산
+                    p99865_long = np.percentile(var_data_original, 99.865)
+                    p00135_long = np.percentile(var_data_original, 0.135)
+                    p50_long = np.percentile(var_data_original, 50)
+                    
+                    pp_long = (usl - lsl) / (p99865_long - p00135_long)
+                    ppu_long = (usl - p50_long) / (p99865_long - p50_long)
+                    ppl_long = (p50_long - lsl) / (p50_long - p00135_long)
+                    ppk_long = min(ppu_long, ppl_long)
                     
                     # 비모수적 방법으로 합격률 계산 (실제 데이터 분포 사용)
                     within_spec = ((var_data >= lsl) & (var_data <= usl)).sum()
@@ -668,13 +685,17 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     cpk = ppk
                     
                     # 계산 방법 표시
-                    method_used = "비모수적 방법(백분위수 기반)"
+                    method_used = "비모수적 방법(백분위수 기반, 단기/장기 구분)"
             else:
                 st.warning("표준편차가 0입니다. 공정능력지수를 계산할 수 없습니다.")
                 cp = np.nan
                 cpu = np.nan
                 cpl = np.nan
                 cpk = np.nan
+                pp = np.nan
+                ppu = np.nan
+                ppl = np.nan
+                ppk = np.nan
                 yield_rate = np.nan
                 defect_rate_ppm = np.nan
                 method_used = "계산 불가"
@@ -926,18 +947,19 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 st.metric("분석 방법", method_used)
                 st.caption("데이터 특성에 따른 방법")
 
-            # 기존 공정능력지수 표시
-            metrics_row2_col1, metrics_row2_col2, metrics_row2_col3, metrics_row2_col4 = st.columns(4)
+            # 단기 공정능력지수 표시
+            st.subheader("단기 공정능력지수")
+            metrics_row2_col1, metrics_row2_col2 = st.columns(2)
 
             with metrics_row2_col1:
-                # 공정능력지수 표시
+                # 단기 공정능력지수 표시
                 cp_display = f"{cp:.2f}" if not np.isnan(cp) else "N/A"
                 cp_name = "Cp" if normality_result == "정규 분포 (p >= 0.05)" else "Pp"
                 st.metric(cp_name, cp_display, 
                          delta="주의 필요" if not np.isnan(cp) and cp >= 1 and cp < 1.33 else
                                "적합" if not np.isnan(cp) and cp >= 1.33 else
                                "부적합" if not np.isnan(cp) and cp < 1 else "계산 불가")
-                st.caption("공정의 산포가 규격 대비 얼마나 좁은지")
+                st.caption("단기 공정의 산포가 규격 대비 얼마나 좁은지")
 
             with metrics_row2_col2:
                 cpk_display = f"{cpk:.2f}" if not np.isnan(cpk) else "N/A"
@@ -946,19 +968,49 @@ if 'data' in st.session_state and st.session_state.data is not None:
                          delta="주의 필요" if not np.isnan(cpk) and cpk >= 1 and cpk < 1.33 else
                                "적합" if not np.isnan(cpk) and cpk >= 1.33 else
                                "부적합" if not np.isnan(cpk) and cpk < 1 else "계산 불가")
-                st.caption("공정 산포와 중심위치를 모두 고려한 지수")
+                st.caption("단기 공정 산포와 중심위치를 모두 고려한 지수")
 
-            with metrics_row2_col3:
-                cpu_display = f"{cpu:.2f}" if not np.isnan(cpu) else "N/A"
-                cpu_name = "Cpu" if normality_result == "정규 분포 (p >= 0.05)" else "Ppu"
-                st.metric(cpu_name, cpu_display)
-                st.caption("상한규격 기준 공정능력")
+            # 장기 공정능력지수 표시
+            st.subheader("장기 공정능력지수")
+            metrics_row3_col1, metrics_row3_col2 = st.columns(2)
 
-            with metrics_row2_col4:
-                cpl_display = f"{cpl:.2f}" if not np.isnan(cpl) else "N/A"
-                cpl_name = "Cpl" if normality_result == "정규 분포 (p >= 0.05)" else "Ppl"
-                st.metric(cpl_name, cpl_display)
-                st.caption("하한규격 기준 공정능력")
+            with metrics_row3_col1:
+                # 장기 공정능력지수 표시
+                pp_display = f"{pp:.2f}" if not np.isnan(pp) else "N/A"
+                pp_name = "Pp"
+                st.metric(pp_name, pp_display, 
+                         delta="주의 필요" if not np.isnan(pp) and pp >= 1 and pp < 1.33 else
+                               "적합" if not np.isnan(pp) and pp >= 1.33 else
+                               "부적합" if not np.isnan(pp) and pp < 1 else "계산 불가")
+                st.caption("장기 공정의 산포가 규격 대비 얼마나 좁은지")
+
+            with metrics_row3_col2:
+                ppk_display = f"{ppk:.2f}" if not np.isnan(ppk) else "N/A"
+                ppk_name = "Ppk"
+                st.metric(ppk_name, ppk_display, 
+                         delta="주의 필요" if not np.isnan(ppk) and ppk >= 1 and ppk < 1.33 else
+                               "적합" if not np.isnan(ppk) and ppk >= 1.33 else
+                               "부적합" if not np.isnan(ppk) and ppk < 1 else "계산 불가")
+                st.caption("장기 공정 산포와 중심위치를 모두 고려한 지수")
+
+            # 장단기 비교 설명
+            st.info("""
+            💡 **단기와 장기 공정능력지수의 차이**
+            1. **단기 공정능력지수 (Cp, Cpk)**:
+               - 이상치 제거 후 데이터로 계산
+               - 공정의 잠재적 능력을 평가
+               - 목표: 1.33 이상
+            
+            2. **장기 공정능력지수 (Pp, Ppk)**:
+               - 전체 데이터(이상치 포함)로 계산
+               - 실제 공정의 성능을 평가
+               - 목표: 1.33 이상
+            
+            3. **해석**:
+               - Pp < Cp: 공정이 안정적이지 않음
+               - Ppk < Cpk: 공정 중심이 불안정함
+               - 차이가 클수록 공정 개선 필요성 증가
+            """)
 
             # 분포 및 합격률 시각화를 Plotly로 변경
             # 히스토그램과 분포 시각화 - 합격률 시각적 표현
