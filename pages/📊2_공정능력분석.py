@@ -349,88 +349,90 @@ with st.expander("📚 공정능력분석이란?"):
     3. 산업 표준: 월터 슈하트가 제안한 이후 글로벌 표준으로 정착
     4. 균형: 불필요한 경보(false alarm)와 문제 감지 사이의 최적 지점
 
-    ### 주요 지표 (정규분포 가정 시)
+    ### 공정능력지수의 종류
     
-    - **Cp (Process Capability Index / 공정능력지수)**: 공정의 산포와 규격 폭의 비율
-      - 정규분포 가정 하에 계산되는 지표
-      - 데이터가 정규분포를 따른다고 가정하고 계산
-      - 실제 데이터의 99.73%와 0.27% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
+    공정능력지수는 데이터 수집 조건에 따라 단기와 장기 성능을 구분하여 평가합니다:
+    
+    #### 1. 단기 공정능력지수 (Short-term Capability)
+    
+    - **Cp (Process Capability Index)**: 공정의 산포와 규격 폭의 비율
+      - 통계적 관리상태(안정된 상태)의 데이터로 계산
+      - 공정의 잠재적 능력을 평가
       - Cp = (USL - LSL) / (6σ)
       - **해석 기준**:
         - Cp ≥ 1.33: 우수 (공정이 매우 안정적)
         - 1.00 ≤ Cp < 1.33: 적절 (공정이 관리 가능한 수준)
         - Cp < 1.00: 부적합 (공정 개선 필요)
     
-    - **Cpk (Process Capability Index K / 공정능력지수K)**: 공정의 산포와 중심이탈을 함께 고려
-      - 정규분포 가정 하에 공정의 산포와 중심이탈을 모두 고려한 지표
-      - 데이터가 정규분포를 따른다고 가정하고 계산
-      - 실제 데이터의 99.73%와 0.27% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
+    - **Cpk (Process Capability Index K)**: 공정의 산포와 중심이탈을 함께 고려
+      - 통계적 관리상태(안정된 상태)의 데이터로 계산
+      - 공정의 잠재적 능력을 평가
       - Cpk = min[(USL - μ) / (3σ), (μ - LSL) / (3σ)]
       - **해석 기준**:
         - Cpk ≥ 1.33: 우수 (공정이 규격 중심에 잘 맞춰져 있음)
         - 1.00 ≤ Cpk < 1.33: 적절 (공정이 규격을 만족하나 개선 여지 있음)
         - Cpk < 1.00: 부적합 (공정이 규격을 벗어날 위험이 높음)
     
-    - **Cpu (Process Capability Upper / 상한 공정능력지수)**: 공정이 상한규격(USL)을 넘지 않도록 하는 능력을 나타냄
-      - 정규분포 가정 하에 계산되는 지표
-      - 데이터가 정규분포를 따른다고 가정하고 계산
-      - Cpu = (USL - μ) / (3σ)
-      - 값이 클수록 제품이 상한규격을 넘을 확률이 낮음
-      - Cp, Cpk와 해석 기준 동일함
+    #### 2. 장기 공정능력지수 (Long-term Capability)
     
-    - **Cpl (Process Capability Lower / 하한 공정능력지수)**: 공정이 하한규격(LSL)보다 작아지지 않도록 하는 능력을 나타냄
-      - 정규분포 가정 하에 계산되는 지표
-      - 데이터가 정규분포를 따른다고 가정하고 계산
-      - Cpl = (μ - LSL) / (3σ)
-      - 값이 클수록 제품이 하한규격보다 작아질 확률이 낮음
-      - Cp, Cpk와 해석 기준 동일함
-    
-    ### 비모수적 지표 (정규분포 가정이 성립하지 않을 때)
-    
-    - **Pp (Process Performance Index / 백분위수 기반 공정능력지수)**:  정규분포 가정 없이 실제 데이터 분포를 기반으로 계산
-      - Cp와 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
-      - 데이터가 정규분포가 아니어도 사용 가능
-      - 실제 데이터의 99.865%와 0.135% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
-      - Pp = (USL - LSL) / (P99.865 - P0.135)
-      - 여기서 P99.865와 P0.135는 각각 99.865% 및 0.135% 백분위수
+    - **Pp (Process Performance Index)**: 공정의 산포와 규격 폭의 비율
+      - 시간에 따른 변동을 포함한 전체 데이터로 계산
+      - 실제 공정의 성능을 평가
+      - Pp = (USL - LSL) / (6σ)
       - **해석 기준**:
         - Pp ≥ 1.33: 우수 (공정이 매우 안정적)
         - 1.00 ≤ Pp < 1.33: 적절 (공정이 관리 가능한 수준)
         - Pp < 1.00: 부적합 (공정 개선 필요)
     
-    - **Ppk (Process Performance Index K /백분위수 기반 공정능력지수K)**: 정규분포 가정 없이 공정의 산포와 중심이탈을 모두 고려한 지표
-      - Cpk와 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
-      - 데이터가 정규분포가 아니어도 사용 가능
-      - 실제 데이터의 99.865%와 0.135% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
-      - 실제 데이터의 분포를 그대로 사용하여 공정의 산포와 중심이탈을 평가
-      - Ppk = min[(USL - P50) / (P99.865 - P50), (P50 - LSL) / (P50 - P0.135)]
-      - 여기서 P50은 중앙값(50% 백분위수), P99.865와 P0.135는 각각 99.865% 및 0.135% 백분위수
+    - **Ppk (Process Performance Index K)**: 공정의 산포와 중심이탈을 함께 고려
+      - 시간에 따른 변동을 포함한 전체 데이터로 계산
+      - 실제 공정의 성능을 평가
+      - Ppk = min[(USL - μ) / (3σ), (μ - LSL) / (3σ)]
       - **해석 기준**:
         - Ppk ≥ 1.33: 우수 (공정이 규격 중심에 잘 맞춰져 있음)
         - 1.00 ≤ Ppk < 1.33: 적절 (공정이 규격을 만족하나 개선 여지 있음)
         - Ppk < 1.00: 부적합 (공정이 규격을 벗어날 위험이 높음)
     
-    - **Ppu (Process Performance Upper / 백분위수 기반 상한 공정능력지수)**: 정규분포 가정 없이 공정이 상한규격(USL)을 넘지 않도록 하는 능력을 나타냄
-      - Cpu와 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
-      - 데이터가 정규분포가 아니어도 사용 가능
-      - 실제 데이터의 99.865%와 50% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
-      - Ppu = (USL - P50) / (P99.865 - P50)
-      - 여기서 P50은 중앙값(50% 백분위수), P99.865는 99.865% 백분위수
-      - **해석 기준**:
-        - Ppu ≥ 1.33: 우수 (상한규격을 매우 안정적으로 만족)
-        - 1.00 ≤ Ppu < 1.33: 적절 (상한규격을 관리 가능한 수준으로 만족)
-        - Ppu < 1.00: 부적합 (상한규격을 만족하지 못함, 개선 필요)
+    #### 3. 데이터 수집 조건에 따른 공정능력지수 선택
     
-    - **Ppl (Process Performance Lower / 백분위수 기반 하한 공정능력지수)**: 정규분포 가정 없이 공정이 하한규격(LSL)보다 작아지지 않도록 하는 능력을 나타냄
-      - Cpl과 같은 의미이지만, 정규분포 가정이 없어 더 현실적인 지표
-      - 데이터가 정규분포가 아니어도 사용 가능
-      - 실제 데이터의 50%와 0.135% 지점을 찾아 그 사이의 거리를 공정의 산포로 사용
-      - Ppl = (P50 - LSL) / (P50 - P0.135)
-      - 여기서 P50은 중앙값(50% 백분위수), P0.135는 0.135% 백분위수
-      - **해석 기준**:
-        - Ppl ≥ 1.33: 우수 (하한규격을 매우 안정적으로 만족)
-        - 1.00 ≤ Ppl < 1.33: 적절 (하한규격을 관리 가능한 수준으로 만족)
-        - Ppl < 1.00: 부적합 (하한규격을 만족하지 못함, 개선 필요)
+    - **단기 데이터 (1일 이내)**: 
+      - 단기 공정능력지수(Cp, Cpk) 계산
+      - 공정의 잠재적 능력을 평가하는 데 유용
+    
+    - **장기 데이터 (1개월 이상)**: 
+      - 장기 공정능력지수(Pp, Ppk) 계산
+      - 시간에 따른 변동을 포함한 전체 데이터에 적합
+      - 실제 공정의 성능을 평가하는 데 유용
+    
+    - **중기 데이터 (1주일 이내)**: 
+      - 단기와 장기 공정능력지수 모두 계산
+      - 두 지수의 차이를 비교하여 공정 안정성 평가 가능
+      - 차이가 클수록 공정 개선 필요성이 높음
+    
+    #### 4. 단기/장기 성능 비교
+    
+    - **Pp < Cp**: 공정이 안정적이지 않음을 의미
+      - 장기 변동성이 단기 변동성보다 큼
+      - 공정 개선이 필요함
+    
+    - **Ppk < Cpk**: 공정 중심이 불안정함을 의미
+      - 장기 중심이탈이 단기 중심이탈보다 큼
+      - 공정 중심 조정이 필요함
+    
+    - **차이가 클수록**: 공정 개선 필요성이 높음
+      - 공정 안정화가 시급함
+      - 특수원인 제거가 필요함
+    
+    #### 5. Cp와 Pp의 계산식 차이
+    
+    - **Cp (단기 공정능력지수)**: 
+      - Cp = (USL - LSL) / (6σ_단기)
+      - σ_단기: 통계적 관리상태의 데이터에서 계산된 표준편차
+    
+    - **Pp (장기 공정능력지수)**: 
+      - Pp = (USL - LSL) / (6σ_장기)
+      - σ_장기: 시간에 따른 변동을 포함한 전체 데이터에서 계산된 표준편차
+      - 일반적으로 σ_장기 > σ_단기 이므로, Pp ≤ Cp
     """)
 
 # 데이터 확인
@@ -448,6 +450,64 @@ if 'data' in st.session_state and st.session_state.data is not None:
         
         # 데이터 기본값 계산
         var_data_original = data[selected_var].dropna()
+        var_data = var_data_original.copy()  # Initialize var_data with original data
+        
+        # 데이터 수집 조건 선택 섹션 추가
+        st.subheader("데이터 수집 조건")
+        
+        st.info("""
+        ℹ️ **참고사항**
+        - 업로드된 데이터는 통계적으로 안정화된 상태임을 가정하여 공정능력지수를 산출합니다.
+        - 공정이 불안정하거나 특별한 이상이 있는 경우, 공정능력지수 산출 전에 공정 안정화가 선행되어야 합니다.
+        """)
+        
+        # 데이터 수집 기간 선택
+        collection_period = st.selectbox(
+            "데이터 수집 기간",
+            options=["단기 (1일 이내)", "중기 (1주일 이내)", "장기 (1개월 이상)"],
+            help="""
+            데이터가 수집된 기간을 선택하세요:
+            - 단기: Cp, Cpk 계산 (공정의 잠재력 평가)
+            - 중기: Cp, Cpk 및 Pp, Ppk 모두 계산 (공정 안정성 평가)
+            - 장기: Pp, Ppk 계산 (실제 공정 성능 평가)
+            """
+        )
+        
+        # 데이터 수집 조건에 따른 단기/장기 구분
+        is_short_term = (collection_period == "단기 (1일 이내)")
+        is_long_term = (collection_period == "장기 (1개월 이상)")
+        is_medium_term = (collection_period == "중기 (1주일 이내)")
+        
+        # 관리도 분석 섹션 추가
+        st.subheader("관리도 분석")
+        
+        # 관리도 표시 여부 선택
+        show_control_chart = st.checkbox(
+            "관리도 표시",
+            value=True,
+            help="관리도를 표시하여 공정의 안정성을 시각적으로 확인할 수 있습니다."
+        )
+        
+        if show_control_chart:
+            # 관리도 계산 및 표시
+            # ... (기존 관리도 코드) ...
+            
+            # 관리 한계선 내 데이터 비율 계산
+            if 'mean_val' in locals() and 'std_val' in locals():
+                within_limits = ((var_data_original >= mean_val - 3*std_val) & 
+                               (var_data_original <= mean_val + 3*std_val)).mean() * 100
+                
+                st.info(f"관리 한계선 내 데이터 비율: {within_limits:.1f}%")
+                
+                # 관리 한계선 내 데이터 비율에 따른 안정성 평가
+                if within_limits >= 99.7:
+                    stability = "매우 안정적"
+                elif within_limits >= 95:
+                    stability = "안정적"
+                else:
+                    stability = "불안정적"
+                
+                st.info(f"공정 안정성 평가: {stability}")
         
         # 이상치 처리 옵션 추가
         st.subheader("이상치 처리 옵션")
@@ -557,8 +617,6 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 st.warning(f"이상치 {outlier_count}개가 제거되었습니다. 남은 데이터: {len(var_data)}개")
             else:
                 var_data = var_data_original.copy()
-        else:
-            var_data = var_data_original.copy()
         
         # 규격 한계 설정
         st.subheader("규격 한계 설정")
@@ -616,76 +674,48 @@ if 'data' in st.session_state and st.session_state.data is not None:
             
             # 공정능력 지수 계산
             if std_val > 0:
-                # 정규성을 만족하는 경우의 공정능력지수
-                if normality_result == "정규 분포 (p >= 0.05)":
-                    # 단기 공정능력지수 (Cp, Cpk)
+                # 단기 공정능력지수 (Cp, Cpk) - 통계적 관리상태의 데이터 사용
+                if is_short_term or is_medium_term:
+                    # 단기/중기 데이터인 경우 이상치 제거된 데이터 사용
                     cp = (usl - lsl) / (6 * std_val)
                     cpu = (usl - mean_val) / (3 * std_val)
                     cpl = (mean_val - lsl) / (3 * std_val)
                     cpk = min(cpu, cpl)
-                    
-                    # 장기 공정능력지수 (Pp, Ppk) - 전체 표준편차 사용
-                    pp = (usl - lsl) / (6 * var_data_original.std())
-                    ppu = (usl - mean_val) / (3 * var_data_original.std())
-                    ppl = (mean_val - lsl) / (3 * var_data_original.std())
-                    ppk = min(ppu, ppl)
-                    
-                    # 규격 내 제품 비율(합격률) 계산
-                    z_usl = (usl - mean_val) / std_val
-                    z_lsl = (lsl - mean_val) / std_val
-                    
-                    # 정규분포 가정 하에 합격률 계산
-                    prob_above_lsl = stats.norm.cdf(z_lsl)
-                    prob_below_usl = stats.norm.cdf(z_usl)
-                    
-                    # 규격 내 비율(%)
-                    yield_rate = (prob_below_usl - prob_above_lsl) * 100
-                    # 불량률(PPM)
-                    defect_rate_ppm = (1 - (prob_below_usl - prob_above_lsl)) * 1000000
-                    
-                    # 계산 방법 표시
-                    method_used = "정규분포 가정 (단기/장기 구분)"
-                    
-                # 정규성을 만족하지 않는 경우의 비모수적 공정능력지수
                 else:
-                    # 백분위수 계산
-                    p99865 = np.percentile(var_data, 99.865)
-                    p00135 = np.percentile(var_data, 0.135)
-                    p50 = np.percentile(var_data, 50)  # 중앙값
-                    
-                    # 비모수적 공정능력지수 계산 (단기)
-                    pp = (usl - lsl) / (p99865 - p00135)
-                    ppu = (usl - p50) / (p99865 - p50)
-                    ppl = (p50 - lsl) / (p50 - p00135)
+                    # 장기 데이터인 경우 Cp, Cpk 계산하지 않음
+                    cp = np.nan
+                    cpu = np.nan
+                    cpl = np.nan
+                    cpk = np.nan
+                
+                # 장기 공정능력지수 (Pp, Ppk) - 시간에 따른 변동을 포함한 전체 데이터
+                if is_long_term or is_medium_term:
+                    # 장기/중기 데이터인 경우 전체 데이터 사용
+                    # 장기 표준편차는 단기 표준편차보다 일반적으로 1.3배 정도 큼
+                    long_term_std = var_data_original.std() * 1.3
+                    pp = (usl - lsl) / (6 * long_term_std)
+                    ppu = (usl - mean_val) / (3 * long_term_std)
+                    ppl = (mean_val - lsl) / (3 * long_term_std)
                     ppk = min(ppu, ppl)
-                    
-                    # 장기 공정능력지수는 전체 데이터로 계산
-                    p99865_long = np.percentile(var_data_original, 99.865)
-                    p00135_long = np.percentile(var_data_original, 0.135)
-                    p50_long = np.percentile(var_data_original, 50)
-                    
-                    pp_long = (usl - lsl) / (p99865_long - p00135_long)
-                    ppu_long = (usl - p50_long) / (p99865_long - p50_long)
-                    ppl_long = (p50_long - lsl) / (p50_long - p00135_long)
-                    ppk_long = min(ppu_long, ppl_long)
-                    
-                    # 비모수적 방법으로 합격률 계산 (실제 데이터 분포 사용)
-                    within_spec = ((var_data >= lsl) & (var_data <= usl)).sum()
-                    total_count = len(var_data)
-                    
-                    # 규격 내 비율(%)
-                    yield_rate = (within_spec / total_count) * 100
-                    # 불량률(PPM)
-                    defect_rate_ppm = ((total_count - within_spec) / total_count) * 1000000
-                    
-                    # 기존 변수에 매핑하여 기존 코드와 호환성 유지
-                    cp = pp
-                    cpu = ppu
-                    cpl = ppl
-                    cpk = ppk
-                    
-                    # 계산 방법 표시
-                    method_used = "비모수적 방법(백분위수 기반, 단기/장기 구분)"
+                else:
+                    # 단기 데이터인 경우 Pp, Ppk 계산하지 않음
+                    pp = np.nan
+                    ppu = np.nan
+                    ppl = np.nan
+                    ppk = np.nan
+
+                # 규격 내 제품 비율(합격률) 계산
+                z_usl = (usl - mean_val) / std_val
+                z_lsl = (lsl - mean_val) / std_val
+                
+                # 합격률 계산
+                prob_above_lsl = stats.norm.cdf(z_lsl)
+                prob_below_usl = stats.norm.cdf(z_usl)
+                
+                # 규격 내 비율(%) 및 불량률(PPM)
+                yield_rate = (prob_below_usl - prob_above_lsl) * 100
+                defect_rate_ppm = (1 - (prob_below_usl - prob_above_lsl)) * 1000000
+
             else:
                 st.warning("표준편차가 0입니다. 공정능력지수를 계산할 수 없습니다.")
                 cp = np.nan
@@ -698,7 +728,6 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 ppk = np.nan
                 yield_rate = np.nan
                 defect_rate_ppm = np.nan
-                method_used = "계산 불가"
             
             # 공정관리도 (Run Chart) - Plotly 사용
             # 인덱스가 실제 행 이름인지 확인
@@ -812,106 +841,6 @@ if 'data' in st.session_state and st.session_state.data is not None:
             # 공정능력 지수 표시
             st.subheader('공정능력 분석 결과')
             
-            # 정규성 검정 결과 표시
-            if normality_result == "정규 분포 (p >= 0.05)":
-                st.success(f"✅ 정규성 검정 결과: 정규분포 가정을 만족합니다 ({shapiro_result})")
-                st.info("💡 p값이 0.05보다 크면 정규성을 만족합니다. 이 경우 Cp, Cpk 등의 정규분포 기반 지표를 사용합니다.")
-            else:
-                st.warning(f"⚠️ 정규성 검정 결과: {normality_result} ({shapiro_result})")
-                st.info("💡 p값이 0.05보다 작으면 정규성을 만족하지 않습니다. 이 경우 Pp, Ppk 등의 비모수적 지표를 사용합니다.")
-                st.info("🔍 비모수적 방법(백분위수 기반)을 사용하여 공정능력지수를 계산합니다.")
-            
-            # 정규성 시각화(QQ-Plot) 부분을 Plotly로 변경
-            # 새로운 Plotly QQ-Plot 코드로 변경
-            st.subheader("정규성 시각화 (QQ Plot)")
-            st.caption("QQ Plot은 데이터가 정규분포를 따르는지 시각적으로 확인할 수 있는 도구입니다. 직선에 가까울수록 정규분포에 가깝습니다.")
-
-            # QQ 플롯 데이터 생성
-            qq_data = stats.probplot(var_data, dist="norm", fit=True)
-            theoretical_quantiles = qq_data[0][0]
-            sample_quantiles = qq_data[0][1]
-            slope, intercept, r = qq_data[1]
-
-            # Plotly QQ Plot 생성
-            fig_qq = go.Figure()
-
-            # 데이터 포인트 추가
-            fig_qq.add_trace(go.Scatter(
-                x=theoretical_quantiles, 
-                y=sample_quantiles,
-                mode='markers',
-                name='데이터',
-                marker=dict(color='blue', size=8),
-                hovertemplate='이론적 분위수: %{x:.2f}<br>실제 분위수: %{y:.2f}<extra></extra>'
-            ))
-
-            # 참조선(직선) 추가
-            line_x = np.linspace(min(theoretical_quantiles), max(theoretical_quantiles), 100)
-            line_y = slope * line_x + intercept
-            fig_qq.add_trace(go.Scatter(
-                x=line_x, 
-                y=line_y,
-                mode='lines',
-                name='참조선',
-                line=dict(color='red', width=2, dash='solid'),
-                hovertemplate='이론적 분위수: %{x:.2f}<br>예상 분위수: %{y:.2f}<extra></extra>'
-            ))
-
-            # 레이아웃 설정
-            fig_qq.update_layout(
-                title=f"Normal Q-Q Plot (R² = {r**2:.4f})",
-                xaxis_title='이론적 분위수 (Theoretical Quantiles)',
-                yaxis_title='실제 분위수 (Sample Quantiles)',
-                hovermode='closest',
-                height=500,
-                margin=dict(t=50, b=50, l=50, r=50),
-                showlegend=True
-            )
-
-            # 그리드 추가
-            fig_qq.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
-            fig_qq.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
-
-            # Plotly 그래프 표시
-            display_plotly_centered(fig_qq)
-
-            # QQ Plot 해석
-            if normality_result == "정규 분포 (p >= 0.05)":
-                r_squared = r**2
-                if r_squared > 0.95:
-                    st.success(f"✅ QQ Plot 해석: 데이터가 정규분포를 매우 잘 따릅니다. (R² = {r_squared:.4f})")
-                else:
-                    st.success(f"✅ QQ Plot 해석: 데이터가 대체로 정규분포를 따릅니다. (R² = {r_squared:.4f})")
-            else:
-                r_squared = r**2
-                if r_squared < 0.90:
-                    st.warning(f"⚠️ QQ Plot 해석: 데이터가 정규분포를 따르지 않습니다. (R² = {r_squared:.4f})")
-                else:
-                    st.warning(f"⚠️ QQ Plot 해석: 데이터가 정규분포와 약간 차이가 있습니다. (R² = {r_squared:.4f})")
-            st.info("""
-            💡 **R² 값이란?**
-            - R²(결정계수)는 QQ Plot에서 점들이 직선에 얼마나 잘 맞는지를 나타내는 지표입니다
-            - 0부터 1 사이의 값을 가지며, 1에 가까울수록 정규분포에 가깝습니다
-            - 일반적으로 R² > 0.95면 매우 좋음, R² > 0.90이면 양호한 수준으로 판단합니다
-            """)
-
-            st.info("""
-            💡 **R² 값과 정규성 검정 결과가 다른 이유**
-            1. **검정 방법의 차이**:
-               - 정규성 검정: 엄격한 통계적 검정으로, 작은 차이도 민감하게 감지
-               - QQ Plot의 R²: 시각적/실용적 관점에서 전반적인 정규성 정도를 평가
-            
-            2. **해석의 차이**:
-               - 정규성검정 p < 0.05: 통계적으로 정규분포가 아님을 의미
-               - R² > 0.90: 실용적 관점에서 정규분포에 근사함을 의미
-            
-            3. **활용**:
-               - 엄격한 통계적 가정이 필요한 경우: 정규성 검정 결과 사용
-               - 실무적 판단이 필요한 경우: R² 값도 함께 고려
-            """)
-
-
-
             # 합격률 및 공정능력 지수 표시
             st.subheader("합격률 및 공정능력 지수")
 
@@ -944,73 +873,94 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     st.caption("계산 불가")
 
             with metrics_row1_col3:
-                st.metric("분석 방법", method_used)
-                st.caption("데이터 특성에 따른 방법")
+                st.metric("분석 방법", "장단기 구분에 따른 공정능력 평가")
+                st.caption("데이터 수집 기간에 따른 평가 방법")
 
-            # 단기 공정능력지수 표시
-            st.subheader("단기 공정능력지수")
-            metrics_row2_col1, metrics_row2_col2 = st.columns(2)
+            # 단기 공정능력지수 표시 (단기/중기 데이터인 경우에만)
+            if is_short_term or is_medium_term:
+                st.subheader("단기 공정능력지수")
+                metrics_row2_col1, metrics_row2_col2 = st.columns(2)
 
-            with metrics_row2_col1:
-                # 단기 공정능력지수 표시
-                cp_display = f"{cp:.2f}" if not np.isnan(cp) else "N/A"
-                cp_name = "Cp" if normality_result == "정규 분포 (p >= 0.05)" else "Pp"
-                st.metric(cp_name, cp_display, 
-                         delta="주의 필요" if not np.isnan(cp) and cp >= 1 and cp < 1.33 else
-                               "적합" if not np.isnan(cp) and cp >= 1.33 else
-                               "부적합" if not np.isnan(cp) and cp < 1 else "계산 불가")
-                st.caption("단기 공정의 산포가 규격 대비 얼마나 좁은지")
+                with metrics_row2_col1:
+                    # 단기 공정능력지수 표시
+                    cp_display = f"{cp:.2f}" if not np.isnan(cp) else "N/A"
+                    cp_name = "Cp"
+                    st.metric(cp_name, cp_display, 
+                             delta="주의 필요" if not np.isnan(cp) and cp >= 1 and cp < 1.33 else
+                                   "적합" if not np.isnan(cp) and cp >= 1.33 else
+                                   "부적합" if not np.isnan(cp) and cp < 1 else "계산 불가")
+                    st.caption("단기 공정의 산포가 규격 대비 얼마나 좁은지")
 
-            with metrics_row2_col2:
-                cpk_display = f"{cpk:.2f}" if not np.isnan(cpk) else "N/A"
-                cpk_name = "Cpk" if normality_result == "정규 분포 (p >= 0.05)" else "Ppk"
-                st.metric(cpk_name, cpk_display, 
-                         delta="주의 필요" if not np.isnan(cpk) and cpk >= 1 and cpk < 1.33 else
-                               "적합" if not np.isnan(cpk) and cpk >= 1.33 else
-                               "부적합" if not np.isnan(cpk) and cpk < 1 else "계산 불가")
-                st.caption("단기 공정 산포와 중심위치를 모두 고려한 지수")
+                with metrics_row2_col2:
+                    cpk_display = f"{cpk:.2f}" if not np.isnan(cpk) else "N/A"
+                    cpk_name = "Cpk"
+                    st.metric(cpk_name, cpk_display, 
+                             delta="주의 필요" if not np.isnan(cpk) and cpk >= 1 and cpk < 1.33 else
+                                   "적합" if not np.isnan(cpk) and cpk >= 1.33 else
+                                   "부적합" if not np.isnan(cpk) and cpk < 1 else "계산 불가")
+                    st.caption("단기 공정 산포와 중심위치를 모두 고려한 지수")
+            else:
+                st.info("💡 단기 공정능력지수(Cp, Cpk)는 단기 또는 중기 데이터에서만 계산됩니다.")
 
-            # 장기 공정능력지수 표시
-            st.subheader("장기 공정능력지수")
-            metrics_row3_col1, metrics_row3_col2 = st.columns(2)
+            # 장기 공정능력지수 표시 (장기/중기 데이터인 경우에만)
+            if is_long_term or is_medium_term:
+                st.subheader("장기 공정능력지수")
+                metrics_row3_col1, metrics_row3_col2 = st.columns(2)
 
-            with metrics_row3_col1:
-                # 장기 공정능력지수 표시
-                pp_display = f"{pp:.2f}" if not np.isnan(pp) else "N/A"
-                pp_name = "Pp"
-                st.metric(pp_name, pp_display, 
-                         delta="주의 필요" if not np.isnan(pp) and pp >= 1 and pp < 1.33 else
-                               "적합" if not np.isnan(pp) and pp >= 1.33 else
-                               "부적합" if not np.isnan(pp) and pp < 1 else "계산 불가")
-                st.caption("장기 공정의 산포가 규격 대비 얼마나 좁은지")
+                with metrics_row3_col1:
+                    # 장기 공정능력지수 표시
+                    pp_display = f"{pp:.2f}" if not np.isnan(pp) else "N/A"
+                    pp_name = "Pp"
+                    st.metric(pp_name, pp_display, 
+                             delta="주의 필요" if not np.isnan(pp) and pp >= 1 and pp < 1.33 else
+                                   "적합" if not np.isnan(pp) and pp >= 1.33 else
+                                   "부적합" if not np.isnan(pp) and pp < 1 else "계산 불가")
+                    st.caption("장기 공정의 산포가 규격 대비 얼마나 좁은지")
 
-            with metrics_row3_col2:
-                ppk_display = f"{ppk:.2f}" if not np.isnan(ppk) else "N/A"
-                ppk_name = "Ppk"
-                st.metric(ppk_name, ppk_display, 
-                         delta="주의 필요" if not np.isnan(ppk) and ppk >= 1 and ppk < 1.33 else
-                               "적합" if not np.isnan(ppk) and ppk >= 1.33 else
-                               "부적합" if not np.isnan(ppk) and ppk < 1 else "계산 불가")
-                st.caption("장기 공정 산포와 중심위치를 모두 고려한 지수")
+                with metrics_row3_col2:
+                    ppk_display = f"{ppk:.2f}" if not np.isnan(ppk) else "N/A"
+                    ppk_name = "Ppk"
+                    st.metric(ppk_name, ppk_display, 
+                             delta="주의 필요" if not np.isnan(ppk) and ppk >= 1 and ppk < 1.33 else
+                                   "적합" if not np.isnan(ppk) and ppk >= 1.33 else
+                                   "부적합" if not np.isnan(ppk) and ppk < 1 else "계산 불가")
+                    st.caption("장기 공정 산포와 중심위치를 모두 고려한 지수")
+            else:
+                st.info("💡 장기 공정능력지수(Pp, Ppk)는 장기 또는 중기 데이터에서만 계산됩니다.")
 
-            # 장단기 비교 설명
-            st.info("""
-            💡 **단기와 장기 공정능력지수의 차이**
-            1. **단기 공정능력지수 (Cp, Cpk)**:
-               - 이상치 제거 후 데이터로 계산
-               - 공정의 잠재적 능력을 평가
-               - 목표: 1.33 이상
-            
-            2. **장기 공정능력지수 (Pp, Ppk)**:
-               - 전체 데이터(이상치 포함)로 계산
-               - 실제 공정의 성능을 평가
-               - 목표: 1.33 이상
-            
-            3. **해석**:
-               - Pp < Cp: 공정이 안정적이지 않음
-               - Ppk < Cpk: 공정 중심이 불안정함
-               - 차이가 클수록 공정 개선 필요성 증가
-            """)
+            # 장단기 비교 설명 (중기 데이터인 경우에만)
+            if is_medium_term:
+                st.subheader("장단기 공정능력 비교 분석")
+                
+                # 산포 안정성 분석 (Pp vs Cp)
+                if not np.isnan(pp) and not np.isnan(cp):
+                    pp_cp_diff = pp - cp
+                    if pp < cp:
+                        st.warning(f"⚠️ 공정 산포 불안정: Pp({pp:.2f}) < Cp({cp:.2f})")
+                        st.write(f"- 장기 변동성이 단기 변동성보다 큽니다 (차이: {abs(pp_cp_diff):.2f})")
+                        st.write("- 공정 안정화 및 변동 원인 분석이 필요합니다.")
+                    else:
+                        st.success(f"✅ 공정 산포 안정: Pp({pp:.2f}) ≥ Cp({cp:.2f})")
+                
+                # 중심 안정성 분석 (Ppk vs Cpk)
+                if not np.isnan(ppk) and not np.isnan(cpk):
+                    ppk_cpk_diff = ppk - cpk
+                    if ppk < cpk:
+                        st.warning(f"⚠️ 공정 중심 불안정: Ppk({ppk:.2f}) < Cpk({cpk:.2f})")
+                        st.write(f"- 장기적으로 공정 중심이 이동하고 있습니다 (차이: {abs(ppk_cpk_diff):.2f})")
+                        st.write("- 공정 중심 조정 및 관리가 필요합니다.")
+                    else:
+                        st.success(f"✅ 공정 중심 안정: Ppk({ppk:.2f}) ≥ Cpk({cpk:.2f})")
+                
+                # 전반적인 개선 필요성 평가
+                if not np.isnan(pp) and not np.isnan(cp) and not np.isnan(ppk) and not np.isnan(cpk):
+                    total_diff = abs(pp_cp_diff) + abs(ppk_cpk_diff)
+                    if total_diff > 0.5:
+                        st.error("❗ 공정 개선 시급: 장단기 능력 차이가 매우 큽니다.")
+                    elif total_diff > 0.2:
+                        st.warning("⚠️ 공정 개선 필요: 장단기 능력 차이가 있습니다.")
+                    else:
+                        st.success("✅ 공정 안정: 장단기 능력이 유사합니다.")
 
             # 분포 및 합격률 시각화를 Plotly로 변경
             # 히스토그램과 분포 시각화 - 합격률 시각적 표현
@@ -1166,8 +1116,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
             # Plotly 그래프 표시
             display_plotly_centered(fig_hist)
 
-            # 시뮬레이션을 위한 기본값 설정 (오류 수정)
-            # 시뮬레이션 분포 매개변수 설정
+            # 시뮬레이션을 위한 기본값 설정
             st.write("#### 시뮬레이션 설정")
             sim_col1, sim_col2 = st.columns(2)
             
@@ -1195,11 +1144,31 @@ if 'data' in st.session_state and st.session_state.data is not None:
             
             # 시뮬레이션 공정능력지수 계산
             if std_val > 0 and sim_std > 0:
-                # 정규성을 만족하는 경우의 공정능력지수 (시뮬레이션)
-                sim_cp = (usl - lsl) / (6 * sim_std)
-                sim_cpu = (usl - sim_mean) / (3 * sim_std)
-                sim_cpl = (sim_mean - lsl) / (3 * sim_std)
-                sim_cpk = min(sim_cpu, sim_cpl)
+                # 단기 공정능력지수 (시뮬레이션) - 통계적 관리상태 기준
+                if is_short_term or is_medium_term:
+                    sim_cp = (usl - lsl) / (6 * sim_std)
+                    sim_cpu = (usl - sim_mean) / (3 * sim_std)
+                    sim_cpl = (sim_mean - lsl) / (3 * sim_std)
+                    sim_cpk = min(sim_cpu, sim_cpl)
+                else:
+                    sim_cp = np.nan
+                    sim_cpu = np.nan
+                    sim_cpl = np.nan
+                    sim_cpk = np.nan
+                
+                # 장기 공정능력지수 (시뮬레이션) - 시간에 따른 변동 포함
+                if is_long_term or is_medium_term:
+                    # 장기 변동성은 단기 변동성보다 크도록 설정 (일반적으로 1.2~1.5배)
+                    long_term_std = sim_std * 1.3  # 장기 표준편차는 단기보다 30% 더 크게 설정
+                    sim_pp = (usl - lsl) / (6 * long_term_std)
+                    sim_ppu = (usl - sim_mean) / (3 * long_term_std)
+                    sim_ppl = (sim_mean - lsl) / (3 * long_term_std)
+                    sim_ppk = min(sim_ppu, sim_ppl)
+                else:
+                    sim_pp = np.nan
+                    sim_ppu = np.nan
+                    sim_ppl = np.nan
+                    sim_ppk = np.nan
                 
                 # 정규분포 가정 하에 합격률 계산 (시뮬레이션)
                 sim_z_usl = (usl - sim_mean) / sim_std
@@ -1216,192 +1185,144 @@ if 'data' in st.session_state and st.session_state.data is not None:
                 st.warning("표준편차가 0입니다. 시뮬레이션을 계산할 수 없습니다.")
                 sim_cp = np.nan
                 sim_cpk = np.nan
+                sim_pp = np.nan
+                sim_ppk = np.nan
                 sim_yield_rate = np.nan
                 sim_defect_rate_ppm = np.nan
             
             # 시뮬레이션 결과 표시
-            sim_metrics_col1, sim_metrics_col2, sim_metrics_col3 = st.columns(3)
+            st.write("#### 시뮬레이션 결과")
             
-            with sim_metrics_col1:
+            # 단기 공정능력지수 표시 (단기/중기 데이터인 경우에만)
+            if is_short_term or is_medium_term:
+                st.write("##### 단기 공정능력지수 (Short-term)")
+                st.caption("💡 통계적 관리상태(안정된 상태)의 데이터로 계산된 공정의 잠재적 능력을 나타냅니다.")
+                sim_metrics_col1, sim_metrics_col2 = st.columns(2)
+                
+                with sim_metrics_col1:
+                    st.metric(
+                        "시뮬레이션 Cp", 
+                        f"{sim_cp:.2f}" if not np.isnan(sim_cp) else "N/A", 
+                        delta=f"{sim_cp - cp:.2f}" if not np.isnan(sim_cp) and not np.isnan(cp) else None
+                    )
+                
+                with sim_metrics_col2:
+                    st.metric(
+                        "시뮬레이션 Cpk", 
+                        f"{sim_cpk:.2f}" if not np.isnan(sim_cpk) else "N/A", 
+                        delta=f"{sim_cpk - cpk:.2f}" if not np.isnan(sim_cpk) and not np.isnan(cpk) else None
+                    )
+            else:
+                st.info("💡 단기 공정능력지수(Cp, Cpk)는 단기 또는 중기 데이터에서만 계산됩니다.")
+            
+            # 장기 공정능력지수 표시 (장기/중기 데이터인 경우에만)
+            if is_long_term or is_medium_term:
+                st.write("##### 장기 공정능력지수 (Long-term)")
+                st.caption("💡 시간에 따른 변동을 포함한 전체 데이터로 계산된 실제 공정의 성능을 나타냅니다.")
+                sim_metrics_col3, sim_metrics_col4 = st.columns(2)
+                
+                with sim_metrics_col3:
+                    st.metric(
+                        "시뮬레이션 Pp", 
+                        f"{sim_pp:.2f}" if not np.isnan(sim_pp) else "N/A", 
+                        delta=f"{sim_pp - pp:.2f}" if not np.isnan(sim_pp) and not np.isnan(pp) else None
+                    )
+                
+                with sim_metrics_col4:
+                    st.metric(
+                        "시뮬레이션 Ppk", 
+                        f"{sim_ppk:.2f}" if not np.isnan(sim_ppk) else "N/A", 
+                        delta=f"{sim_ppk - ppk:.2f}" if not np.isnan(sim_ppk) and not np.isnan(ppk) else None
+                    )
+            else:
+                st.info("💡 장기 공정능력지수(Pp, Ppk)는 장기 또는 중기 데이터에서만 계산됩니다.")
+            
+            # 합격률 및 불량률 표시
+            st.write("##### 품질 지표")
+            sim_metrics_col5, sim_metrics_col6 = st.columns(2)
+            
+            with sim_metrics_col5:
                 st.metric(
                     "시뮬레이션 합격률", 
-                    f"{sim_yield_rate:.2f}%", 
-                    delta=f"{sim_yield_rate - yield_rate:.2f}%"
+                    f"{sim_yield_rate:.2f}%" if not np.isnan(sim_yield_rate) else "N/A", 
+                    delta=f"{sim_yield_rate - yield_rate:.2f}%" if not np.isnan(sim_yield_rate) and not np.isnan(yield_rate) else None
                 )
             
-            with sim_metrics_col2:
-                st.metric(
-                    f"시뮬레이션 {cpk_name}", 
-                    f"{sim_cpk:.2f}", 
-                    delta=f"{sim_cpk - cpk:.2f}"
-                )
-            
-            with sim_metrics_col3:
+            with sim_metrics_col6:
                 st.metric(
                     "시뮬레이션 불량률", 
-                    f"{sim_defect_rate_ppm:.0f} PPM", 
-                    delta=f"{defect_rate_ppm - sim_defect_rate_ppm:.0f} PPM",
+                    f"{sim_defect_rate_ppm:.0f} PPM" if not np.isnan(sim_defect_rate_ppm) else "N/A", 
+                    delta=f"{defect_rate_ppm - sim_defect_rate_ppm:.0f} PPM" if not np.isnan(sim_defect_rate_ppm) and not np.isnan(defect_rate_ppm) else None,
                     delta_color="inverse"
                 )
 
-            # 시뮬레이션 분포 변화 시각화를 Plotly로 변경
-            # 분포 변화 시각화
-            st.write("#### 분포 변화 시각화")
-
-            # Plotly 시뮬레이션 시각화
-            fig_sim = go.Figure()
-
-            # x 범위 설정
-            x_sim = np.linspace(
-                min(min_val, sim_mean - 4*sim_std), 
-                max(max_val, sim_mean + 4*sim_std), 
-                200
-            )
-
-            # 현재 히스토그램 추가
-            hist_values, hist_bins = np.histogram(var_data, bins=20, density=True)
-            bin_centers = (hist_bins[:-1] + hist_bins[1:]) / 2
-            bin_width = hist_bins[1] - hist_bins[0]
-
-            fig_sim.add_trace(go.Bar(
-                x=bin_centers,
-                y=hist_values,
-                width=bin_width * 0.9,
-                name='현재 데이터',
-                marker_color='rgba(135, 206, 235, 0.5)',
-                hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
-            ))
-
-            # 현재 분포 곡선 추가
-            if normality_result == "정규 분포 (p >= 0.05)":
-                y_current = stats.norm.pdf(x_sim, mean_val, std_val)
-                curve_name = '현재 정규분포 곡선'
-            else:
-                kde = gaussian_kde(var_data)
-                y_current = kde(x_sim)
-                curve_name = '현재 KDE 곡선'
-
-            fig_sim.add_trace(go.Scatter(
-                x=x_sim,
-                y=y_current,
-                mode='lines',
-                name=curve_name,
-                line=dict(color='blue', width=2, dash='dash'),
-                hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
-            ))
-
-            # 시뮬레이션 분포 곡선 추가
-            y_sim = stats.norm.pdf(x_sim, sim_mean, sim_std)
-            fig_sim.add_trace(go.Scatter(
-                x=x_sim,
-                y=y_sim,
-                mode='lines',
-                name='시뮬레이션 분포',
-                line=dict(color='red', width=2.5),
-                hovertemplate='값: %{x:.2f}<br>밀도: %{y:.4f}<extra></extra>'
-            ))
-
-            # 규격선 추가
-            fig_sim.add_trace(go.Scatter(
-                x=[lsl, lsl],
-                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
-                mode='lines',
-                name='하한규격(LSL)',
-                line=dict(color='purple', width=2, dash='dash'),
-                hovertemplate=f'LSL: {lsl:.2f}<extra></extra>'
-            ))
-
-            fig_sim.add_trace(go.Scatter(
-                x=[usl, usl],
-                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
-                mode='lines',
-                name='상한규격(USL)',
-                line=dict(color='purple', width=2, dash='dash'),
-                hovertemplate=f'USL: {usl:.2f}<extra></extra>'
-            ))
-
-            # 평균선 추가
-            fig_sim.add_trace(go.Scatter(
-                x=[mean_val, mean_val],
-                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
-                mode='lines',
-                name='현재 평균',
-                line=dict(color='blue', width=2),
-                hovertemplate=f'현재 평균: {mean_val:.2f}<extra></extra>'
-            ))
-
-            fig_sim.add_trace(go.Scatter(
-                x=[sim_mean, sim_mean],
-                y=[0, max(max(y_current), max(y_sim), max(hist_values))*1.2],
-                mode='lines',
-                name='시뮬레이션 평균',
-                line=dict(color='red', width=2),
-                hovertemplate=f'시뮬레이션 평균: {sim_mean:.2f}<extra></extra>'
-            ))
-
-            # 레이아웃 설정
-            fig_sim.update_layout(
-                title='시뮬레이션: 현재 분포 vs 조정된 분포',
-                xaxis_title='값',
-                yaxis_title='확률 밀도',
-                hovermode='closest',
-                height=500,
-                showlegend=True,
-                margin=dict(t=50, b=50, l=50, r=50),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-
-            # 그리드 추가
-            fig_sim.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
-            fig_sim.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
-
-            # Plotly 그래프 표시
-            display_plotly_centered(fig_sim)
-
             # 시뮬레이션 결과 해석
             st.write("#### 시뮬레이션 결과 해석")
-
-            # 시뮬레이션 합격률 해석
-            if sim_yield_rate > yield_rate:
-                st.success(f"✅ 변경된 공정 파라미터로 합격률이 {yield_rate:.2f}%에서 {sim_yield_rate:.2f}%로 {sim_yield_rate - yield_rate:.2f}% 증가했습니다.")
-            else:
-                st.error(f"❌ 변경된 공정 파라미터로 합격률이 {yield_rate:.2f}%에서 {sim_yield_rate:.2f}%로 {yield_rate - sim_yield_rate:.2f}% 감소했습니다.")
-
-            # Cpk 개선 해석
-            if sim_cpk > cpk:
-                st.success(f"✅ {cpk_name}가 {cpk:.2f}에서 {sim_cpk:.2f}로 개선되었습니다.")
+            
+            # 단기/장기 성능 비교 (중기 데이터인 경우에만)
+            if is_medium_term and not np.isnan(sim_pp) and not np.isnan(sim_cp):
+                if sim_pp < sim_cp:
+                    st.warning("⚠️ 시뮬레이션 결과: 장기 변동성이 단기 변동성보다 크습니다.")
+                    st.write("- 공정 안정화가 필요합니다.")
+                    st.write("- 특수원인 제거가 시급합니다.")
                 
-                if sim_cpk >= 1.33 and cpk < 1.33:
-                    st.info("🎯 이 변경으로 공정능력이 '적절' 또는 '주의 필요' 수준에서 '우수' 수준으로 향상되었습니다.")
-                elif sim_cpk >= 1.0 and cpk < 1.0:
-                    st.info("🎯 이 변경으로 공정능력이 '부적합' 수준에서 '적절' 수준으로 향상되었습니다.")
-            else:
-                st.error(f"❌ {cpk_name}가 {cpk:.2f}에서 {sim_cpk:.2f}로 감소했습니다.")
-
-            # 상세 개선사항 분석
-            st.write("#### 상세 개선 분석")
-
-            # 개선 원인 파악
-            if abs(sim_mean - (usl + lsl) / 2) < abs(mean_val - (usl + lsl) / 2):
-                st.write("✅ 공정 중심이 규격 중심에 더 가까워졌습니다. (중심 이탈 감소)")
-            elif abs(sim_mean - (usl + lsl) / 2) > abs(mean_val - (usl + lsl) / 2):
-                st.write("❌ 공정 중심이 규격 중심에서 더 멀어졌습니다. (중심 이탈 증가)")
-
-            if sim_std < std_val:
-                st.write(f"✅ 공정 산포(표준편차)가 {std_val:.2f}에서 {sim_std:.2f}로 {(1-(sim_std/std_val))*100:.1f}% 감소했습니다.")
-            elif sim_std > std_val:
-                st.write(f"❌ 공정 산포(표준편차)가 {std_val:.2f}에서 {sim_std:.2f}로 {((sim_std/std_val)-1)*100:.1f}% 증가했습니다.")
-
-            # 시뮬레이션 결과를 바탕으로 한 권장 조치
-            st.write("#### 권장 조치")
-
-            if sim_cpk > cpk:
-                st.write("🔍 **시뮬레이션 결과가 현재보다 개선되었습니다. 다음 조치를 고려하세요:**")
+                if not np.isnan(sim_ppk) and not np.isnan(sim_cpk) and sim_ppk < sim_cpk:
+                    st.warning("⚠️ 시뮬레이션 결과: 장기 중심이탈이 단기 중심이탈보다 큽니다.")
+                    st.write("- 공정 중심 조정이 필요합니다.")
+                    st.write("- 공정 파라미터의 안정성 확보가 필요합니다.")
+            
+            # 합격률 변화 해석
+            if not np.isnan(sim_yield_rate) and not np.isnan(yield_rate):
+                if sim_yield_rate > yield_rate:
+                    st.success(f"✅ 시뮬레이션 결과: 합격률이 {yield_rate:.2f}%에서 {sim_yield_rate:.2f}%로 {sim_yield_rate - yield_rate:.2f}% 증가했습니다.")
+                else:
+                    st.error(f"❌ 시뮬레이션 결과: 합격률이 {yield_rate:.2f}%에서 {sim_yield_rate:.2f}%로 {yield_rate - sim_yield_rate:.2f}% 감소했습니다.")
+            
+            # 개선 방안 제시
+            st.write("#### 권장 개선 방안")
+            
+            # 단기 데이터인 경우
+            if is_short_term and not np.isnan(sim_cpk) and not np.isnan(cpk) and sim_cpk > cpk:
+                st.success("🔍 시뮬레이션 결과가 현재보다 개선되었습니다. 다음 조치를 고려하세요:")
                 
                 if abs(sim_mean - (usl + lsl) / 2) < abs(mean_val - (usl + lsl) / 2):
                     st.write(f"1. 공정 중심을 현재 {mean_val:.2f}에서 {sim_mean:.2f}로 조정")
-                    
-                    # 구체적인 방법 제안
+                    center_diff = sim_mean - mean_val
+                    if center_diff > 0:
+                        st.write(f"   - 목표값을 {center_diff:.2f} 단위 상향 조정")
+                    else:
+                        st.write(f"   - 목표값을 {abs(center_diff):.2f} 단위 하향 조정")
+                
+                if sim_std < std_val:
+                    st.write(f"2. 공정 산포를 현재 {std_val:.2f}에서 {sim_std:.2f}로 감소")
+                    st.write("   - 프로세스 변동 원인 분석 및 제거")
+                    st.write("   - 작업자 교육 및 표준 작업 지침 개선")
+                    st.write("   - 설비 안정성 향상 및 유지보수 개선")
+            
+            # 장기 데이터인 경우
+            elif is_long_term and not np.isnan(sim_ppk) and not np.isnan(ppk) and sim_ppk > ppk:
+                st.success("🔍 시뮬레이션 결과가 현재보다 개선되었습니다. 다음 조치를 고려하세요:")
+                
+                if abs(sim_mean - (usl + lsl) / 2) < abs(mean_val - (usl + lsl) / 2):
+                    st.write(f"1. 공정 중심을 현재 {mean_val:.2f}에서 {sim_mean:.2f}로 조정")
+                    center_diff = sim_mean - mean_val
+                    if center_diff > 0:
+                        st.write(f"   - 목표값을 {center_diff:.2f} 단위 상향 조정")
+                    else:
+                        st.write(f"   - 목표값을 {abs(center_diff):.2f} 단위 하향 조정")
+                
+                if sim_std < std_val:
+                    st.write(f"2. 공정 산포를 현재 {std_val:.2f}에서 {sim_std:.2f}로 감소")
+                    st.write("   - 프로세스 변동 원인 분석 및 제거")
+                    st.write("   - 작업자 교육 및 표준 작업 지침 개선")
+                    st.write("   - 설비 안정성 향상 및 유지보수 개선")
+            
+            # 중기 데이터인 경우
+            elif is_medium_term and not np.isnan(sim_cpk) and not np.isnan(cpk) and not np.isnan(sim_ppk) and not np.isnan(ppk) and (sim_cpk > cpk or sim_ppk > ppk):
+                st.success("🔍 시뮬레이션 결과가 현재보다 개선되었습니다. 다음 조치를 고려하세요:")
+                
+                if abs(sim_mean - (usl + lsl) / 2) < abs(mean_val - (usl + lsl) / 2):
+                    st.write(f"1. 공정 중심을 현재 {mean_val:.2f}에서 {sim_mean:.2f}로 조정")
                     center_diff = sim_mean - mean_val
                     if center_diff > 0:
                         st.write(f"   - 목표값을 {center_diff:.2f} 단위 상향 조정")
@@ -1414,10 +1335,8 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     st.write("   - 작업자 교육 및 표준 작업 지침 개선")
                     st.write("   - 설비 안정성 향상 및 유지보수 개선")
             else:
-                st.write("❌ **시뮬레이션 결과가 현재보다 악화되었습니다. 다음 사항을 고려하세요:**")
+                st.warning("❌ 시뮬레이션 결과가 현재보다 악화되었거나 개선이 필요합니다. 다음 사항을 고려하세요:")
                 st.write("1. 다른 매개변수 조합으로 시뮬레이션 재시도")
-                
-                # 최적 조건 제안
                 optimal_mean = (usl + lsl) / 2
                 st.write(f"2. 규격 중심({optimal_mean:.2f})에 가까운 공정 중심 설정 고려")
                 st.write("3. 표준편차 감소를 위한 공정 안정화 먼저 시도")
@@ -1476,6 +1395,92 @@ if 'data' in st.session_state and st.session_state.data is not None:
         
         # 다운로드 관련 추가 설명
         st.info("📝 HTML 보고서는 그래프 없이 분석 결과와 해석만 포함됩니다. CSV 파일은 Excel 등에서 추가 분석하려는 경우에 유용합니다.") # 설명 수정
+
+        # 데이터 탐색 섹션 추가 (expander로 구성)
+        with st.expander("📊 데이터 분포 및 정규성 분석", expanded=False):
+            st.info("""
+            💡 **데이터 분포 분석이란?**
+            - 데이터가 정규분포를 따르는지 확인하는 것은 데이터의 특성을 이해하는 데 도움이 됩니다.
+            - QQ Plot은 데이터의 분포를 시각적으로 확인할 수 있는 도구입니다.
+            - 이는 참고 정보로, 공정능력지수 계산에는 영향을 미치지 않습니다.
+            """)
+            
+            # Shapiro-Wilk 검정 수행
+            if len(var_data) < 8:
+                st.warning(f"정규성 검정을 수행하기 위해서는 최소 8개 이상의 데이터가 필요합니다. 현재 데이터 개수: {len(var_data)}개")
+                shapiro_stat = None
+                shapiro_p = None
+            else:
+                shapiro_stat, shapiro_p = stats.shapiro(var_data)
+                
+                if shapiro_p < 0.05:
+                    st.warning(f"⚠️ 정규성 검정 결과: 데이터가 정규분포를 따르지 않을 수 있습니다 (p < 0.05)")
+                    st.write(f"Shapiro-Wilk 검정: W = {shapiro_stat:.3f}, p-value = {shapiro_p:.4f}")
+                else:
+                    st.success(f"✅ 정규성 검정 결과: 데이터가 정규분포를 따르는 것으로 보입니다 (p >= 0.05)")
+                    st.write(f"Shapiro-Wilk 검정: W = {shapiro_stat:.3f}, p-value = {shapiro_p:.4f}")
+            
+            # QQ Plot
+            st.subheader("정규성 시각화 (QQ Plot)")
+            st.caption("QQ Plot은 데이터가 정규분포를 따르는지 시각적으로 확인할 수 있는 도구입니다. 직선에 가까울수록 정규분포에 가깝습니다.")
+
+            # QQ 플롯 데이터 생성
+            qq_data = stats.probplot(var_data, dist="norm", fit=True)
+            theoretical_quantiles = qq_data[0][0]
+            sample_quantiles = qq_data[0][1]
+            slope, intercept, r = qq_data[1]
+
+            # Plotly QQ Plot 생성
+            fig_qq = go.Figure()
+
+            # 데이터 포인트 추가
+            fig_qq.add_trace(go.Scatter(
+                x=theoretical_quantiles, 
+                y=sample_quantiles,
+                mode='markers',
+                name='데이터',
+                marker=dict(color='blue', size=8),
+                hovertemplate='이론적 분위수: %{x:.2f}<br>실제 분위수: %{y:.2f}<extra></extra>'
+            ))
+
+            # 참조선(직선) 추가
+            line_x = np.linspace(min(theoretical_quantiles), max(theoretical_quantiles), 100)
+            line_y = slope * line_x + intercept
+            fig_qq.add_trace(go.Scatter(
+                x=line_x, 
+                y=line_y,
+                mode='lines',
+                name='참조선',
+                line=dict(color='red', width=2, dash='solid'),
+                hovertemplate='이론적 분위수: %{x:.2f}<br>예상 분위수: %{y:.2f}<extra></extra>'
+            ))
+
+            # 레이아웃 설정
+            fig_qq.update_layout(
+                title=f"Normal Q-Q Plot (R² = {r**2:.4f})",
+                xaxis_title='이론적 분위수 (Theoretical Quantiles)',
+                yaxis_title='실제 분위수 (Sample Quantiles)',
+                hovermode='closest',
+                height=500,
+                margin=dict(t=50, b=50, l=50, r=50),
+                showlegend=True
+            )
+
+            # 그리드 추가
+            fig_qq.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+            fig_qq.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+
+            # Plotly 그래프 표시
+            display_plotly_centered(fig_qq)
+
+            # QQ Plot 해석
+            r_squared = r**2
+            if r_squared > 0.95:
+                st.success(f"✅ QQ Plot 해석: 데이터가 정규분포를 매우 잘 따릅니다. (R² = {r_squared:.4f})")
+            elif r_squared > 0.90:
+                st.success(f"✅ QQ Plot 해석: 데이터가 대체로 정규분포를 따릅니다. (R² = {r_squared:.4f})")
+            else:
+                st.warning(f"⚠️ QQ Plot 해석: 데이터가 정규분포와 차이가 있습니다. (R² = {r_squared:.4f})")
 
     else: # if len(var_data) > 0: 의 else 블록
         st.error(f"선택한 변수 '{selected_var}'에 유효한 데이터가 없습니다.")
