@@ -448,9 +448,28 @@ if 'data' in st.session_state and st.session_state.data is not None:
             options=numeric_cols
         )
         
+        # 정규성 변환 데이터 확인
+        use_transformed_data = False
+        if 'transformed_vars' in st.session_state and selected_var in st.session_state.transformed_vars:
+            use_transformed_data = st.checkbox(
+                "정규성 변환된 데이터 사용",
+                value=True,
+                help="정규성 분석 페이지에서 변환된 데이터를 사용합니다. 체크를 해제하면 원본 데이터를 사용합니다."
+            )
+            if use_transformed_data:
+                transform_info = st.session_state.transformed_vars[selected_var]
+                st.info(f"""
+                ℹ️ '{selected_var}'에 대해 {transform_info['method']} 변환된 데이터를 사용합니다.
+                - 변환 날짜: {transform_info['timestamp']}
+                - R² 값: {transform_info['r_squared']:.4f}
+                """)
+        
         # 데이터 기본값 계산
         var_data_original = data[selected_var].dropna()
-        var_data = var_data_original.copy()  # Initialize var_data with original data
+        if use_transformed_data:
+            var_data = st.session_state.transformed_vars[selected_var]['data']
+        else:
+            var_data = var_data_original.copy()
         
         # 데이터 수집 조건 선택 섹션 추가
         st.subheader("데이터 수집 조건")
