@@ -24,7 +24,7 @@ def display_plotly_centered(fig, width_pct=60):
     with cols[1]:
         st.plotly_chart(fig, use_container_width=True)
 
-st.title("2. 통계분석")
+st.title("4. 통계분석")
 
 # 통계분석 개념 설명 추가
 with st.expander("📚 통계분석이란?"):

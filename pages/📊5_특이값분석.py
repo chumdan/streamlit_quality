@@ -19,7 +19,7 @@ GOLD_COLOR = "#C0A548"
 SILVER_COLOR = "#B5B5B5"
 BLACK_COLOR = "#000000"
 
-st.title("3. 특이값 분석")
+st.title("5. 특이값 분석")
 
 # 특이값 분석 개념 설명 추가
 with st.expander("📚 특이값(이상치) 분석이란?"):

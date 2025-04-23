@@ -257,7 +257,7 @@ if 'model_id' not in st.session_state:
 if 'model_info' not in st.session_state:
     st.session_state.model_info = {}
 
-st.title("4. 시뮬레이션")
+st.title("6. 시뮬레이션")
 
 # 시뮬레이션 개념 설명 추가
 with st.expander("📚 예측 시뮬레이션이란?"):
@@ -1739,7 +1739,10 @@ if data is not None:
                         )
                         target_min = target_value
                         target_max = float('inf')
-                        st.info(f"시스템은 {target_value} 이상이면서 최대한 이 값에 가까운 결과를 찾습니다.")
+                        
+                        # 소수점 자리 수 제한 (2자리로 표시)
+                        target_value_formatted = f"{target_value:.2f}" if isinstance(target_value, float) else target_value
+                        st.info(f"시스템은 {target_value_formatted} 이상이면서 최대한 이 값에 가까운 결과를 찾습니다.")
                         
                     elif optimization_goal == "목표값보다 작은 값":
                         target_value = st.number_input(
@@ -1751,7 +1754,10 @@ if data is not None:
                         )
                         target_min = float('-inf')
                         target_max = target_value
-                        st.info(f"시스템은 {target_value} 이하이면서 최대한 이 값에 가까운 결과를 찾습니다.")
+                        
+                        # 소수점 자리 수 제한 (2자리로 표시)
+                        target_value_formatted = f"{target_value:.2f}" if isinstance(target_value, float) else target_value
+                        st.info(f"시스템은 {target_value_formatted} 이하이면서 최대한 이 값에 가까운 결과를 찾습니다.")
                         
                     else:  # "목표값 범위 내"
                         col1, col2 = st.columns(2)
@@ -1774,7 +1780,11 @@ if data is not None:
                         target_value = (target_min + target_max) / 2
                         if target_min >= target_max:
                             st.warning("최소값은 최대값보다 작아야 합니다.")
-                        st.info(f"시스템은 {target_min}에서 {target_max} 사이의 값을 가지는 최적 조합을 찾습니다.")
+                        
+                        # 소수점 자리 수 제한 (2자리로 표시)
+                        target_min_formatted = f"{target_min:.2f}" if isinstance(target_min, float) else target_min
+                        target_max_formatted = f"{target_max:.2f}" if isinstance(target_max, float) else target_max
+                        st.info(f"시스템은 {target_min_formatted}에서 {target_max_formatted} 사이의 값을 가지는 최적 조합을 찾습니다.")
                     
                     # 최적화 방법 선택
                     optimization_method = st.radio(
@@ -1980,24 +1990,37 @@ if data is not None:
                     col2.metric("최소값", f"{target_min:.4f}")
                     col3.metric("최대값", f"{target_max:.4f}")
                     
-                    # 최적화 모드인 경우 목표값과의 차이 표시
+                    # 최적화 모드인 경우 목표값과의 차이 또는 범위 정보 표시
                     if simulation_mode == "최적화 시뮬레이션":
                         if optimization_goal == "정확한 목표값":
+                            target_value_formatted = f"{target_value:.2f}" if isinstance(target_value, float) else target_value
                             st.metric("목표값과의 차이", f"{abs(prediction - target_value):.4f}")
+                            st.info(f"시스템이 목표값 {target_value_formatted}에 가장 가까운 최적 조합을 찾았습니다.")
                         elif optimization_goal == "목표값보다 큰 값":
+                            target_value_formatted = f"{target_value:.2f}" if isinstance(target_value, float) else target_value
                             if prediction >= target_value:
                                 st.metric("목표 달성", "성공 ✓", f"+{prediction - target_value:.4f}")
+                                st.info(f"시스템이 {target_value_formatted} 이상인 값 중 목표에 가장 가까운 조합을 찾았습니다.")
                             else:
                                 st.metric("목표 달성", "실패 ✗", f"{prediction - target_value:.4f}")
+                                st.warning(f"시스템이 {target_value_formatted} 이상인 값을 찾지 못했습니다.")
                         elif optimization_goal == "목표값보다 작은 값":
+                            target_value_formatted = f"{target_value:.2f}" if isinstance(target_value, float) else target_value
                             if prediction <= target_value:
                                 st.metric("목표 달성", "성공 ✓", f"{target_value - prediction:.4f}")
+                                st.info(f"시스템이 {target_value_formatted} 이하인 값 중 목표에 가장 가까운 조합을 찾았습니다.")
                             else:
                                 st.metric("목표 달성", "실패 ✗", f"{prediction - target_value:.4f}")
+                                st.warning(f"시스템이 {target_value_formatted} 이하인 값을 찾지 못했습니다.")
                         else:  # "목표값 범위 내"
                             if target_min <= prediction <= target_max:
                                 position_pct = (prediction - target_min) / (target_max - target_min) * 100 if target_max > target_min else 50
                                 st.metric("목표 범위 내 위치", f"{position_pct:.1f}%", "범위 내 ✓")
+                                
+                                # 소수점 자리 수 제한 (2자리로 표시)
+                                target_min_formatted = f"{target_min:.2f}" if isinstance(target_min, float) else target_min
+                                target_max_formatted = f"{target_max:.2f}" if isinstance(target_max, float) else target_max
+                                st.info(f"시스템이 {target_min_formatted}에서 {target_max_formatted} 사이의 값을 가지는 최적 조합을 찾았습니다.")
                             else:
                                 if prediction < target_min:
                                     st.metric("목표 범위 이탈", f"{target_min - prediction:.4f}", "범위 미만 ✗")
