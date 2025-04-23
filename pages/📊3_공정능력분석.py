@@ -581,6 +581,20 @@ if 'data' in st.session_state and st.session_state.data is not None:
                                              help="데이터에서 이상치를 탐지하고 처리합니다.")
 
         if use_outlier_treatment:
+            # 변환된 데이터가 있는지 확인
+            is_transformed = selected_var in st.session_state.transformed_vars
+            
+            if is_transformed:
+                st.info(f"""
+                ℹ️ 현재 {st.session_state.transformed_vars[selected_var]['method']} 변환이 적용된 데이터입니다.
+                이상치 처리는 변환된 데이터에 대해 수행됩니다.
+                """)
+                # 변환된 데이터 사용
+                data_for_outlier = st.session_state.transformed_vars[selected_var]['data']
+            else:
+                # 원본 데이터 사용
+                data_for_outlier = var_data_original
+
             with outlier_col1:
                 outlier_method = st.selectbox(
                     "이상치 탐지 방법",
@@ -599,7 +613,7 @@ if 'data' in st.session_state and st.session_state.data is not None:
                     st.caption("💡 임계값 3.0은 데이터의 99.7%를 정상으로 간주 (정규분포 가정 시)")
             
             # 이상치 탐지
-            outliers = detect_outliers(var_data_original, method=outlier_method, threshold=threshold)
+            outliers = detect_outliers(data_for_outlier, method=outlier_method, threshold=threshold)
             outlier_count = outliers.sum()
             
             # 이상치 처리 방법 선택
@@ -612,16 +626,23 @@ if 'data' in st.session_state and st.session_state.data is not None:
             
             # 이상치 정보 표시
             if outlier_count > 0:
-                st.info(f"탐지된 이상치: {outlier_count}개 ({outlier_count/len(var_data_original):.1%})")
+                st.info(f"탐지된 이상치: {outlier_count}개 ({outlier_count/len(data_for_outlier):.1%})")
                 
                 # 이상치 데이터 표시
                 if st.checkbox("이상치 데이터 보기"):
                     # 이상치 데이터만 필터링하여 표시
                     outlier_data = pd.DataFrame({
-                        selected_var: var_data_original[outliers],
-                        '원본 인덱스': var_data_original[outliers].index
+                        '값': data_for_outlier[outliers],
+                        '원본 인덱스': data_for_outlier[outliers].index
                     }).reset_index(drop=True)
-                    st.dataframe(outlier_data)
+                    
+                    if is_transformed:
+                        # 변환된 값과 원본 값 모두 표시
+                        outlier_data['원본 값'] = var_data_original[outliers]
+                        st.dataframe(outlier_data)
+                        st.caption("ℹ️ '값'은 변환된 데이터의 값이며, '원본 값'은 변환 전 데이터의 값입니다.")
+                    else:
+                        st.dataframe(outlier_data)
                     
                     if outlier_treatment == "제거":
                         st.caption("⚠️ 위 이상치들은 분석에서 제외됩니다.")
@@ -632,10 +653,19 @@ if 'data' in st.session_state and st.session_state.data is not None:
             
             # 이상치 처리
             if outlier_treatment == "제거" and outlier_count > 0:
-                var_data = var_data_original[~outliers].copy()
+                if is_transformed:
+                    # 변환된 데이터에서 이상치 제거
+                    st.session_state.transformed_vars[selected_var]['data'] = data_for_outlier[~outliers].copy()
+                    # 원본 데이터도 동일한 인덱스에 대해 제거
+                    var_data = var_data_original[~outliers].copy()
+                else:
+                    var_data = var_data_original[~outliers].copy()
                 st.warning(f"이상치 {outlier_count}개가 제거되었습니다. 남은 데이터: {len(var_data)}개")
             else:
-                var_data = var_data_original.copy()
+                if is_transformed:
+                    var_data = st.session_state.transformed_vars[selected_var]['data'].copy()
+                else:
+                    var_data = var_data_original.copy()
         
         # 규격 한계 설정
         st.subheader("규격 한계 설정")
