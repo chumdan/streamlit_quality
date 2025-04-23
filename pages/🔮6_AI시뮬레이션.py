@@ -1710,14 +1710,71 @@ if data is not None:
                     st.write("### 최적화 시뮬레이션")
                     st.write("목표값을 설정하고 최적의 변수 조합을 찾아보세요.")
                     
-                    # 목표값 설정
-                    target_value = st.number_input(
-                        f"목표 {target_col} 값:",
-                        min_value=float(numeric_data[target_col].min()),
-                        max_value=float(numeric_data[target_col].max()),
-                        value=float(numeric_data[target_col].mean()),
-                        step=0.1
+                    # 목표값 설정 방식 선택
+                    optimization_goal = st.radio(
+                        "최적화 목표 설정:",
+                        ["정확한 목표값", "목표값보다 큰 값", "목표값보다 작은 값", "목표값 범위 내"],
+                        horizontal=True
                     )
+                    
+                    # 목표값 입력 UI 구성
+                    if optimization_goal == "정확한 목표값":
+                        target_value = st.number_input(
+                            f"목표 {target_col} 값:",
+                            min_value=float(numeric_data[target_col].min()),
+                            max_value=float(numeric_data[target_col].max()),
+                            value=float(numeric_data[target_col].mean()),
+                            step=0.1
+                        )
+                        target_min = target_value
+                        target_max = target_value
+                        
+                    elif optimization_goal == "목표값보다 큰 값":
+                        target_value = st.number_input(
+                            f"최소 {target_col} 값:",
+                            min_value=float(numeric_data[target_col].min()),
+                            max_value=float(numeric_data[target_col].max()),
+                            value=float(numeric_data[target_col].mean()),
+                            step=0.1
+                        )
+                        target_min = target_value
+                        target_max = float('inf')
+                        st.info(f"시스템은 {target_value} 이상이면서 최대한 이 값에 가까운 결과를 찾습니다.")
+                        
+                    elif optimization_goal == "목표값보다 작은 값":
+                        target_value = st.number_input(
+                            f"최대 {target_col} 값:",
+                            min_value=float(numeric_data[target_col].min()),
+                            max_value=float(numeric_data[target_col].max()),
+                            value=float(numeric_data[target_col].mean()),
+                            step=0.1
+                        )
+                        target_min = float('-inf')
+                        target_max = target_value
+                        st.info(f"시스템은 {target_value} 이하이면서 최대한 이 값에 가까운 결과를 찾습니다.")
+                        
+                    else:  # "목표값 범위 내"
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            target_min = st.number_input(
+                                f"최소 {target_col} 값:",
+                                min_value=float(numeric_data[target_col].min()),
+                                max_value=float(numeric_data[target_col].max()),
+                                value=float(numeric_data[target_col].mean() * 0.9),
+                                step=0.1
+                            )
+                        with col2:
+                            target_max = st.number_input(
+                                f"최대 {target_col} 값:",
+                                min_value=float(numeric_data[target_col].min()),
+                                max_value=float(numeric_data[target_col].max()),
+                                value=float(numeric_data[target_col].mean() * 1.1),
+                                step=0.1
+                            )
+                        target_value = (target_min + target_max) / 2
+                        if target_min >= target_max:
+                            st.warning("최소값은 최대값보다 작아야 합니다.")
+                        st.info(f"시스템은 {target_min}에서 {target_max} 사이의 값을 가지는 최적 조합을 찾습니다.")
                     
                     # 최적화 방법 선택
                     optimization_method = st.radio(
@@ -1852,8 +1909,26 @@ if data is not None:
                                 else:
                                     prediction = st.session_state.model.predict(input_df)[0]
                                 
-                                # 목표값과의 차이 계산
-                                diff = abs(prediction - target_value)
+                                # 목표값과의 차이 계산 (최적화 목표에 따라 다르게 처리)
+                                if optimization_goal == "정확한 목표값":
+                                    diff = abs(prediction - target_value)
+                                elif optimization_goal == "목표값보다 큰 값":
+                                    # 목표값보다 작으면 큰 패널티, 크면 목표값과의 차이
+                                    diff = 1000 + abs(prediction - target_value) if prediction < target_value else abs(prediction - target_value)
+                                elif optimization_goal == "목표값보다 작은 값":
+                                    # 목표값보다 크면 큰 패널티, 작으면 목표값과의 차이
+                                    diff = 1000 + abs(prediction - target_value) if prediction > target_value else abs(prediction - target_value)
+                                else:  # "목표값 범위 내"
+                                    if target_min <= prediction <= target_max:
+                                        # 범위 내에 있으면 범위 중심과의 거리
+                                        range_center = (target_min + target_max) / 2
+                                        diff = abs(prediction - range_center)
+                                    else:
+                                        # 범위 밖에 있으면 가장 가까운 경계와의 거리에 패널티 추가
+                                        if prediction < target_min:
+                                            diff = 100 + (target_min - prediction)
+                                        else:  # prediction > target_max
+                                            diff = 100 + (prediction - target_max)
                                 
                                 # 결과 저장
                                 result = {
@@ -1907,7 +1982,27 @@ if data is not None:
                     
                     # 최적화 모드인 경우 목표값과의 차이 표시
                     if simulation_mode == "최적화 시뮬레이션":
-                        st.metric("목표값과의 차이", f"{abs(prediction - target_value):.4f}")
+                        if optimization_goal == "정확한 목표값":
+                            st.metric("목표값과의 차이", f"{abs(prediction - target_value):.4f}")
+                        elif optimization_goal == "목표값보다 큰 값":
+                            if prediction >= target_value:
+                                st.metric("목표 달성", "성공 ✓", f"+{prediction - target_value:.4f}")
+                            else:
+                                st.metric("목표 달성", "실패 ✗", f"{prediction - target_value:.4f}")
+                        elif optimization_goal == "목표값보다 작은 값":
+                            if prediction <= target_value:
+                                st.metric("목표 달성", "성공 ✓", f"{target_value - prediction:.4f}")
+                            else:
+                                st.metric("목표 달성", "실패 ✗", f"{prediction - target_value:.4f}")
+                        else:  # "목표값 범위 내"
+                            if target_min <= prediction <= target_max:
+                                position_pct = (prediction - target_min) / (target_max - target_min) * 100 if target_max > target_min else 50
+                                st.metric("목표 범위 내 위치", f"{position_pct:.1f}%", "범위 내 ✓")
+                            else:
+                                if prediction < target_min:
+                                    st.metric("목표 범위 이탈", f"{target_min - prediction:.4f}", "범위 미만 ✗")
+                                else:  # prediction > target_max
+                                    st.metric("목표 범위 이탈", f"{prediction - target_max:.4f}", "범위 초과 ✗")
                     
                     # 최적 변수 값 표시
                     st.write("#### 최적 변수 값:")
